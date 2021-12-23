@@ -7,6 +7,8 @@ package app
 import (
 	"HerosTime/global"
 	"HerosTime/loginutil"
+	"bytes"
+	"embed"
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
@@ -17,7 +19,11 @@ import (
 	"time"
 )
 
+//go:embed config
+var f embed.FS
+
 func init() {
+	global.ConfigFile, _ = f.ReadFile("config/config.yaml")
 	err := D1()
 	if err != nil {
 		log.Println(err)
@@ -36,10 +42,9 @@ func init() {
 }
 
 func D1() error {
-	viper.SetConfigFile("./config/config.yaml") // 指定配置文件
-	viper.AddConfigPath("./")                   // 指定查找配置文件的路径
-	err := viper.ReadInConfig()                 // 读取配置信息
-	if err != nil {                             // 读取配置信息失败
+	viper.SetConfigType("yaml")
+	err := viper.ReadConfig(bytes.NewBuffer(global.ConfigFile))
+	if err != nil { // 读取配置信息失败
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
