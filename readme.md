@@ -1,0 +1,1 @@
+*使用`getAllBranches.sh`获取全部分支*
