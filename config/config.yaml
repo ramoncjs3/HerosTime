@@ -1,0 +1,52 @@
+#项目配置文件
+#当前在用
+
+# 数据库配置
+"Database":
+  "username": "root"
+  "password": ""
+  "hostname": "127.0.0.1:3306"
+  "dbname": "herosgame"
+
+
+  #账号配置
+"Account":
+  "g1":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "g2":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "g3":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h1":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h2":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h3":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h4":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h5":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h6":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h7":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h8":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h9":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h10":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
