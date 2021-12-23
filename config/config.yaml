@@ -1,0 +1,49 @@
+#项目配置文件
+#当前在用
+
+# 数据库配置
+"Database":
+  "username": "root"
+  "password": ""
+  "hostname": "127.0.0.1:3306"
+  "dbname": "herosgame"
+
+
+#账号配置
+"Account":
+  "h5_1":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_2":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_3":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_4":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_5":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_6":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_7":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_8":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+
+#微信推送配置
+"WX_APPTOKEN": "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
+"WX_Topic":
+  "h5_1": !!int '2948'
+  "h5_2": !!int '2949'
+  "h5_3": !!int '2950'
+  "h5_4": !!int '2951'
+  "h5_5": !!int '2952'
+  "h5_6": !!int '2953'
+  "h5_7": !!int '2954'
+  "h5_8": !!int '4034'
