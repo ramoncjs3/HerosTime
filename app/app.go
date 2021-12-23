@@ -5,8 +5,8 @@
 package app
 
 import (
-	"Milk/global"
-	"Milk/loginutil"
+	"HerosTime/global"
+	"HerosTime/loginutil"
 	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
@@ -43,6 +43,12 @@ func D1() error {
 	if err != nil {                             // 读取配置信息失败
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
+
+	global.WX_TOPIC_Initial()
+	for i, v := range viper.GetStringMap("WX_Topic") {
+		global.WX_TOPIC[i] = v.(int)
+	}
+
 	global.LoginStructList = nil //重置登陆信息
 	for i, v := range viper.GetStringMap("Account") {
 		a := &loginutil.Login{
@@ -132,22 +138,7 @@ func D30() error {
 }
 
 func WxTopicid(srvid string) int {
-	var aa = map[string]int{
-		"g1":  2869,
-		"g2":  2883,
-		"g3":  2884,
-		"h1":  2885,
-		"h2":  2886,
-		"h3":  2887,
-		"h4":  2888,
-		"h5":  2889,
-		"h6":  2879,
-		"h7":  2890,
-		"h8":  2891,
-		"h9":  2892,
-		"h10": 2893,
-	}
-	return aa[srvid]
+	return global.WX_TOPIC[srvid]
 }
 
 func _No() error {

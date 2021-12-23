@@ -5,8 +5,8 @@
 package app
 
 import (
-	"Milk/loginutil"
-	"Milk/utils"
+	"HerosTime/loginutil"
+	"HerosTime/utils"
 	"errors"
 	"fmt"
 	"github.com/bitly/go-simplejson"

@@ -50,3 +50,24 @@
   "h10":
     "username": "tfyiran397496548"
     "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h11":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+
+#微信推送配置
+"WX_APPTOKEN": "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
+"WX_Topic":
+  "g1": !!int '2869'
+  "g2": !!int '2883'
+  "g3": !!int '2884'
+  "h1": !!int '2885'
+  "h2": !!int '2886'
+  "h3": !!int '2887'
+  "h4": !!int '2888'
+  "h5": !!int '2889'
+  "h6": !!int '2879'
+  "h7": !!int '2890'
+  "h8": !!int '2891'
+  "h9": !!int '2892'
+  "h10": !!int '2893'
+  "h11": !!int '4035'

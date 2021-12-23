@@ -6,7 +6,7 @@ package loginutil
  */
 
 import (
-	"Milk/utils"
+	"HerosTime/utils"
 	"encoding/json"
 	"fmt"
 	"github.com/bitly/go-simplejson"

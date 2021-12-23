@@ -4,7 +4,7 @@
  */
 package main
 
-import "Milk/app"
+import "HerosTime/app"
 
 func main() {
 	app.Run()

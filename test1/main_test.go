@@ -5,7 +5,7 @@
 package test1
 
 import (
-	"Milk/loginutil"
+	"HerosTime/loginutil"
 	"bytes"
 	"encoding/json"
 	"github.com/bitly/go-simplejson"

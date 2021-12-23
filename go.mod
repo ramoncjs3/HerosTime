@@ -1,4 +1,4 @@
-module Milk
+module HerosTime
 
 go 1.16
 

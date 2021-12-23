@@ -5,8 +5,8 @@
 package app
 
 import (
-	"Milk/loginutil"
-	Util "Milk/utils"
+	"HerosTime/loginutil"
+	Util "HerosTime/utils"
 	"bytes"
 	"encoding/json"
 	"errors"
