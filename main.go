@@ -4,9 +4,10 @@
  */
 package main
 
-import "HerosTime/app"
+import (
+	"HerosTime/app"
+)
 
 func main() {
 	app.Run()
-
 }

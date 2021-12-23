@@ -131,7 +131,7 @@ func Test_aa(t *testing.T) {
 	}
 
 }
+
 func Test_a(t *testing.T) {
-	loginutil.GetServerList()
 
 }
