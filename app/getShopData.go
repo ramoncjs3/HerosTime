@@ -5,6 +5,7 @@
 package app
 
 import (
+	"HerosTime/global"
 	"HerosTime/loginutil"
 	Util "HerosTime/utils"
 	"bytes"
@@ -12,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/bitly/go-simplejson"
-	"io/ioutil"
 	"log"
 	"strconv"
 	"time"
@@ -21,10 +21,8 @@ import (
 // GetShopData 获取老乞丐售卖物品
 func GetShopData(l *loginutil.Login) ([]string, error) {
 	var OldManShopData = []string{}
-	f1, _ := ioutil.ReadFile("./config/Item.json")
-	f2, _ := ioutil.ReadFile("./config/ItemToName.json")
-	ItemJ, _ := simplejson.NewFromReader(bytes.NewReader(f1))
-	ItemNmJ, _ := simplejson.NewFromReader(bytes.NewReader(f2))
+	ItemJ, _ := simplejson.NewFromReader(bytes.NewReader(global.Item))
+	ItemNmJ, _ := simplejson.NewFromReader(bytes.NewReader(global.ItemToName))
 	// 构造请求体
 	nonce := strconv.FormatInt(time.Now().Unix(), 13) + Util.RandStr(8)
 	originBodys := fmt.Sprintf(`{"mod":"User","do":"GetSpecialShopData","p":{"npcID":10163,"roleID":%s,"web":false,"clientVersion":{"android":"2.3.4.1622199442306"},"NeedUpdateVersion":"2.3.4","userAccount":"%s","loginFlag":"%s","nonce":"%s"}}`, strconv.FormatFloat(l.RoleID, 'f', -1, 64), l.Loginid, strconv.FormatFloat(l.LoginFlag, 'f', -1, 64), nonce)

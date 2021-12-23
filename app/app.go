@@ -7,6 +7,8 @@ package app
 import (
 	"HerosTime/global"
 	"HerosTime/loginutil"
+	"bytes"
+	"embed"
 	"errors"
 	"fmt"
 	"github.com/robfig/cron/v3"
@@ -18,7 +20,14 @@ import (
 	"time"
 )
 
+//go:embed config
+var f embed.FS
+
 func init() {
+	global.ConfigFile, _ = f.ReadFile("config/config.yaml")
+	global.Item, _ = f.ReadFile("config/Item.json")
+	global.ItemToName, _ = f.ReadFile("config/ItemToName.json")
+
 	err := D1()
 	if err != nil {
 		log.Println(err)
@@ -37,10 +46,9 @@ func init() {
 }
 
 func D1() error {
-	viper.SetConfigFile("./config/config.yaml") // 指定配置文件
-	viper.AddConfigPath("./")                   // 指定查找配置文件的路径
-	err := viper.ReadInConfig()                 // 读取配置信息
-	if err != nil {                             // 读取配置信息失败
+	viper.SetConfigType("yaml")
+	err := viper.ReadConfig(bytes.NewBuffer(global.ConfigFile))
+	if err != nil { // 读取配置信息失败
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 
@@ -48,6 +56,8 @@ func D1() error {
 	for i, v := range viper.GetStringMap("WX_Topic") {
 		global.WX_TOPIC[i] = v.(int)
 	}
+
+	global.WX_APPTOKEN = viper.GetString("WX_APPTOKEN")
 
 	global.LoginStructList = nil //重置登陆信息
 	for i, v := range viper.GetStringMap("Account") {
@@ -102,7 +112,6 @@ func D1() error {
 }
 
 func D30() error {
-	var appToken = "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
 	for _, v := range global.LoginStructList {
 		if v.IsOver {
 			continue
@@ -113,9 +122,7 @@ func D30() error {
 		}
 		if ItemData != nil {
 			log.Println("[+] 老乞丐售卖物品:", ItemData, "当前区服:", v.ServerCode)
-			//微信提醒通道
-			//appToken := "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
-			msg := model.NewMessage(appToken)
+			msg := model.NewMessage(global.WX_APPTOKEN)
 			msg.Summary = fmt.Sprintf("老乞丐提醒-%s", v.ServerCode)
 			msg.SetContent((strings.Join(ItemData[:], ","))).AddTopicId(WxTopicid(v.ServerCode))
 			msgArr, err := wxpusher.SendMessage(msg)

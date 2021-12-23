@@ -6,19 +6,6 @@ package global
 
 import "HerosTime/loginutil"
 
-//var M []string            //邮件发送大列表
-
-//var ShopDataList []string //老乞丐卖的东西
-//var DB *sql.DB            //db
-//type DbConfig struct {
-//	Username string
-//	Password string
-//	Hostname string
-//	Dbname   string
-//}
-//
-//var Dbcfg = &DbConfig{}
-
 var LoginStructList = []*loginutil.Login{} //配置文件读取的账号信息
 var WX_TOPIC map[string]int
 var WX_APPTOKEN string
@@ -27,3 +14,7 @@ func WX_TOPIC_Initial() {
 	WX_TOPIC = nil
 	WX_TOPIC = make(map[string]int)
 }
+
+var ConfigFile []byte
+var Item []byte
+var ItemToName []byte
