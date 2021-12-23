@@ -24,6 +24,8 @@ var f embed.FS
 
 func init() {
 	global.ConfigFile, _ = f.ReadFile("config/config.yaml")
+	global.Item, _ = f.ReadFile("config/Item.json")
+	global.ItemToName, _ = f.ReadFile("config/ItemToName.json")
 
 	err := D1()
 	if err != nil {
@@ -57,7 +59,7 @@ func D1() error {
 	global.WX_APPTOKEN = viper.GetString("WX_APPTOKEN")
 
 	global.LoginStructList = nil //重置登陆信息
-	for i, _ := range viper.GetStringMap("Account") {
+	for i := range viper.GetStringMap("Account") {
 		a := &loginutil.Login{
 			ServerCode: i,
 		}
@@ -122,7 +124,6 @@ func D1() error {
 
 func D30() error {
 	//微信提醒通道-老乞丐提醒-B
-	var appToken = "AT_McGwztBJ4aiLglXJy75iSbDFqQBsXPsx"
 	for _, v := range global.LoginStructList {
 		if v.IsOver {
 			continue
@@ -133,9 +134,9 @@ func D30() error {
 		}
 		if ItemData != nil {
 			log.Println("[+] 老乞丐售卖物品:", ItemData, "当前区服:", v.ServerCode)
-			msg := model.NewMessage(appToken)
+			msg := model.NewMessage(global.WX_APPTOKEN)
 			msg.Summary = fmt.Sprintf("老乞丐提醒-%s", v.ServerCode)
-			msg.SetContent((strings.Join(ItemData[:], ","))).AddTopicId(WxTopicid(v.ServerCode))
+			msg.SetContent(strings.Join(ItemData[:], ",")).AddTopicId(WxTopicid(v.ServerCode))
 			msgArr, err := wxpusher.SendMessage(msg)
 			log.Println("[+] 微信通道状态:", msgArr, err)
 			if err != nil {

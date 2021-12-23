@@ -20,3 +20,5 @@ func WX_TOPIC_Initial() {
 }
 
 var ConfigFile []byte
+var Item []byte
+var ItemToName []byte
