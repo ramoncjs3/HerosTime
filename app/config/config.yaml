@@ -52,7 +52,7 @@
     "password": "1qaz@WSX"
 
 #微信推送配置
-"WX_APPTOKEN": "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
+"WX_APPTOKEN": "AT_McGwztBJ4aiLglXJy75iSbDFqQBsXPsx"
 "WX_Topic":
   "b1": !!int '2980'
   "b2": !!int '2981'
