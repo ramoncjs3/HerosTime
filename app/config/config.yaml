@@ -53,6 +53,9 @@
   "h11":
     "username": "tfyiran397496548"
     "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
+  "h12":
+    "username": "tfyiran397496548"
+    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
 
 #微信推送配置
 "WX_APPTOKEN": "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
@@ -71,3 +74,4 @@
   "h9": !!int '2892'
   "h10": !!int '2893'
   "h11": !!int '4035'
+  "h12": !!int '6490'
