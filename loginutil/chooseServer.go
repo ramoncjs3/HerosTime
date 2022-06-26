@@ -49,6 +49,9 @@ func ChooseServer(servercode string) (string, string, error) {
 		case "h5暴走8区":
 			rt["h5_8"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
 
+		case "h5暴走9区":
+			rt["h5_9"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
+
 		default:
 			return "", "", errors.New("[-] 区服代码错误.")
 		}

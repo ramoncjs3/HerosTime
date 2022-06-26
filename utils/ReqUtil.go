@@ -16,7 +16,7 @@ var reqHeaders = req.Header{
 
 func ReqPostData(reqUrl string, reqBodys string) (*req.Resp, error) {
 	//req.Debug = true
-	//reqProxy := req.SetProxyUrl("http://127.0.0.1:8085")
+	//reqProxy:=req.SetProxyUrl("http://127.0.0.1:8081")
 
 	if !strings.HasPrefix(reqUrl, "http") {
 		reqUrl = "http://" + reqUrl
@@ -35,7 +35,7 @@ func ReqPostData(reqUrl string, reqBodys string) (*req.Resp, error) {
 
 func ReqGetData(reqUrl string) (*req.Resp, error) {
 	//req.Debug = true
-	//reqProxy := req.SetProxyUrl("http://127.0.0.1:8085")
+	//reqProxy:=req.SetProxyUrl("http://127.0.0.1:8081")
 
 	req.SetTimeout(30 * time.Second)
 	req.SetFlags(req.LstdFlags | req.Lcost)

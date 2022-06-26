@@ -35,6 +35,9 @@
   "h5_8":
     "username": "4399madhero"
     "password": "1qaz@WSX"
+  "h5_9":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
 
 #微信推送配置
 "WX_APPTOKEN": "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
@@ -47,3 +50,4 @@
   "h5_6": !!int '2953'
   "h5_7": !!int '2954'
   "h5_8": !!int '4034'
+  "h5_9": !!int '6491'
