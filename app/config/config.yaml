@@ -11,59 +11,63 @@
 
   #账号配置
 "Account":
-#  "b1":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b2":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b3":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b4":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b5":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b6":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b7":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b8":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b9":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b10":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b11":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b12":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
-#  "b13":
-#    "username": "4399madhero"
-#    "password": "1qaz@WSX"
+  "b1":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b2":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b3":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b4":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b5":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b6":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b7":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b8":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b9":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b10":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b11":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b12":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b13":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b14":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
 
 #微信推送配置
 "WX_APPTOKEN": "AT_McGwztBJ4aiLglXJy75iSbDFqQBsXPsx"
 "WX_Topic":
-#  "b1": !!int '2980'
-#  "b2": !!int '2981'
-#  "b3": !!int '2982'
-#  "b4": !!int '2983'
-#  "b5": !!int '2984'
-#  "b6": !!int '2985'
-#  "b7": !!int '2986'
-#  "b8": !!int '2987'
-#  "b9": !!int '2988'
-#  "b10": !!int '2989'
-#  "b11": !!int '2990'
-#  "b12": !!int '2991'
-#  "b13": !!int '4036'
+  "b1": !!int '2980'
+  "b2": !!int '2981'
+  "b3": !!int '2982'
+  "b4": !!int '2983'
+  "b5": !!int '2984'
+  "b6": !!int '2985'
+  "b7": !!int '2986'
+  "b8": !!int '2987'
+  "b9": !!int '2988'
+  "b10": !!int '2989'
+  "b11": !!int '2990'
+  "b12": !!int '2991'
+  "b13": !!int '4036'
+  "b14": !!int '6487'
