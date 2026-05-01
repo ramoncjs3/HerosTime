@@ -1,0 +1,117 @@
+app:
+  name: oldbeggar
+  timezone: Asia/Shanghai
+  dry_run: true
+  state_file: ../state/oldbeggar-state.json
+  concurrency: 4
+
+http:
+  timeout: 30s
+  retries: 3
+  backoff: 2s
+  insecure_tls: true
+
+schedules:
+  bootstrap_on_start: true
+  refresh_sessions: "0 30 7 * * *"
+  check_shop: "30 0,30 8-23 * * *"
+
+qq:
+  api_url: ${QQ_BOT_API_URL}
+  access_token: ${QQ_BOT_ACCESS_TOKEN}
+  target_type: group
+  default_id: ${QQ_GROUP_ID}
+  group_map_file: ${QQ_GROUP_MAP_FILE}
+  min_interval: 15s
+  group_map: {}
+
+wxpusher:
+  enabled: false
+  endpoint: https://wxpusher.zjiecode.com/api/send/message
+  app_token: ${WXPUSHER_APP_TOKEN}
+  content_type: 1
+  url: ""
+  topic_map_file: ${WXPUSHER_TOPIC_MAP_FILE}
+  topic_map:
+    # g1: 123456
+    # h1: 123457
+    # a1: 123458
+
+notifications:
+  oldbeggar_npc_id: 10163
+  notice_shop_npc_id: 1009
+  notice_shop_delay: 20s
+  watch_items:
+    - 铁剑令
+
+catalog:
+  item_file: catalog/Item.json
+  item_name_file: catalog/ItemToName.json
+
+variants:
+  - name: official
+    kind: official
+    enabled: true
+    # server_index_url and server_list_payload have built-in defaults per kind.
+    auth:
+      username: ${OFFICIAL_USERNAME}
+      password: ${OFFICIAL_PASSWORD}
+    server_rules:
+      - match_prefix: 官方
+        code_prefix: g
+      - match_prefix: 混服
+        code_prefix: h
+    accounts:
+      - server: g1
+      - server: g2
+      - server: h1
+
+  - name: h5
+    kind: h5
+    enabled: false
+    # Defaults to https://bz.maple-game.com/h5.json and the H5 server-list payload.
+    auth:
+      username: ${H5_USERNAME}
+      password: ${H5_PASSWORD}
+      openssl_key: lzYW5qaXVqa
+      game_id: "100053785"
+    server_rules:
+      - match_prefix: h5
+        code_prefix: h5_
+    accounts:
+      - server: h5_1
+      - server: h5_2
+
+  - name: apple
+    kind: apple
+    enabled: false
+    # Defaults to http://bz.maple-game.com/bz.json and the Apple server-list payload.
+    # Apple uses the same login contract as the official Android variant.
+    auth:
+      username: ${APPLE_USERNAME}
+      password: ${APPLE_PASSWORD}
+    server_rules:
+      - match_prefix: 苹果
+        code_prefix: a
+    accounts:
+      - server: a1
+
+  - name: baozou
+    kind: baozou
+    enabled: false
+    # Defaults to http://bz.maple-game.com/bz.json and the baozou server-list payload.
+    auth:
+      username: ${BAOZOU_USERNAME}
+      password: ${BAOZOU_PASSWORD}
+      openssl_key: lzYW5qaXVqa
+      des_key: "57493415"
+      product_code: "83313602112675691534121381984132"
+      channel_code: "27"
+      game_key: "116798"
+      package_name: com.maple.madherogo.m4399
+    server_rules:
+      - match_prefix: 暴走
+        code_prefix: b
+    accounts:
+      - server: b1
+      - server: b2
