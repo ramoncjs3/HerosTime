@@ -1,12 +1,9 @@
-/**
-* @Author: Ramoncjs
-* @Date: 2021/8/20 21:03
- */
 package loginutil
 
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 type urlStruct struct {
@@ -22,46 +19,56 @@ type BZSRVLIST map[string][]string
 var bsvrlst BZSRVLIST
 
 func ChooseServer(servercode string) (string, string, error) {
-	for k, v := range srv {
-		switch v.([]interface{})[5].(string) {
-
-		case "官方1区":
-			rt["g1"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "官方2区":
-			rt["g2"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "官方3区":
-			rt["g3"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服1区":
-			rt["h1"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服2区":
-			rt["h2"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服3区":
-			rt["h3"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服4区":
-			rt["h4"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服5区":
-			rt["h5"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服6区":
-			rt["h6"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服7区":
-			rt["h7"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服8区":
-			rt["h8"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服9区":
-			rt["h9"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服10区":
-			rt["h10"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服11区":
-			rt["h11"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服12区":
-			rt["h12"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-		case "混服13区":
-			rt["h13"] = urlStruct{QuickLoginUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[2].(string)), GameUrl: fmt.Sprintf("%s:%s", bsvrlst[k][0], v.([]interface{})[3].(string))}
-
-		default:
-			return "", "", errors.New("[-] 区服代码错误.")
+	rt = make(map[string]urlStruct)
+	for _, raw := range srv {
+		entry, ok := raw.([]interface{})
+		if !ok || len(entry) < 6 {
+			continue
+		}
+		name, _ := entry[5].(string)
+		code := ""
+		if strings.HasPrefix(name, "官方") {
+			if n := zoneNumber(name); n > 0 {
+				code = fmt.Sprintf("g%d", n)
+			}
+		} else if strings.HasPrefix(name, "混服") {
+			if n := zoneNumber(name); n > 0 {
+				code = fmt.Sprintf("h%d", n)
+			}
+		}
+		if code != "" {
+			rt[code] = urlStruct{
+				QuickLoginUrl: serverURL(entry, 2),
+				GameUrl:       serverURL(entry, 3),
+			}
 		}
 	}
-	return rt[fmt.Sprintf("%s", servercode)].QuickLoginUrl, rt[fmt.Sprintf("%s", servercode)].GameUrl, nil
 
+	selected, ok := rt[servercode]
+	if !ok || selected.QuickLoginUrl == "" || selected.GameUrl == "" {
+		return "", "", errors.New("server code not found: " + servercode)
+	}
+	return selected.QuickLoginUrl, selected.GameUrl, nil
+}
+
+func serverURL(entry []interface{}, pathIndex int) string {
+	if len(entry) <= pathIndex {
+		return ""
+	}
+	base, _ := entry[1].(string)
+	path, _ := entry[pathIndex].(string)
+	if base == "" || path == "" {
+		return ""
+	}
+	return strings.TrimRight(base, "/") + "/" + strings.TrimLeft(path, "/")
+}
+
+func zoneNumber(name string) int {
+	n := 0
+	for _, r := range name {
+		if r >= '0' && r <= '9' {
+			n = n*10 + int(r-'0')
+		}
+	}
+	return n
 }
