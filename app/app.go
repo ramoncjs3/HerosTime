@@ -12,35 +12,48 @@ import (
 	"fmt"
 	"github.com/robfig/cron/v3"
 	"github.com/spf13/viper"
-	"github.com/wxpusher/wxpusher-sdk-go"
-	"github.com/wxpusher/wxpusher-sdk-go/model"
 	"log"
+	"os"
 	"strings"
+	"sync"
 	"time"
 )
 
 //go:embed config
 var f embed.FS
+var jobMu sync.Mutex
 
 func init() {
 	global.ConfigFile, _ = f.ReadFile("config/config.yaml")
 	global.Item, _ = f.ReadFile("config/Item.json")
 	global.ItemToName, _ = f.ReadFile("config/ItemToName.json")
+}
 
-	err := D1()
-	if err != nil {
-		log.Println(err)
-		return
+func bootstrap() error {
+	if err := D1(); err != nil {
+		return err
 	}
-	err = _No()
-	if err != nil {
-		log.Println(err)
-		return
+	if err := _No(); err != nil {
+		return err
 	}
-	err = D30()
-	if err != nil {
+	if time.Now().Hour() < 8 {
+		return nil
+	}
+	if err := D30(); err != nil {
 		log.Println(err)
-		return
+	}
+	return nil
+}
+
+func runExclusive(fn func() error) error {
+	jobMu.Lock()
+	defer jobMu.Unlock()
+	return fn()
+}
+
+func rememberFirstErr(firstErr *error, err error) {
+	if *firstErr == nil {
+		*firstErr = err
 	}
 }
 
@@ -123,6 +136,7 @@ func D1() error {
 }
 
 func D30() error {
+	var firstErr error
 	//微信提醒通道-老乞丐提醒-B
 	for _, v := range global.LoginStructList {
 		if v.IsOver {
@@ -130,28 +144,54 @@ func D30() error {
 		}
 		ItemData, err := GetShopData(v)
 		if err != nil {
-			return err
+			err = fmt.Errorf("server %s get shop data: %w", v.ServerCode, err)
+			log.Println("[-]", err)
+			rememberFirstErr(&firstErr, err)
+			continue
 		}
 		if ItemData != nil {
 			log.Println("[+] 老乞丐售卖物品:", ItemData, "当前区服:", v.ServerCode)
-			msg := model.NewMessage(global.WX_APPTOKEN)
-			msg.Summary = fmt.Sprintf("老乞丐提醒-%s", v.ServerCode)
-			msg.SetContent(strings.Join(ItemData[:], ",")).AddTopicId(WxTopicid(v.ServerCode))
-			msgArr, err := wxpusher.SendMessage(msg)
-			log.Println("[+] 微信通道状态:", msgArr, err)
+			content := strings.Join(ItemData[:], ",")
+			if os.Getenv("DRY_RUN") == "1" {
+				log.Println("[DRY_RUN] skip qq push:", "server:", v.ServerCode, "content:", content)
+				v.IsOver = true
+				continue
+			}
+			summary := fmt.Sprintf("HerosTime old beggar reminder-%s", v.ServerCode)
+			err = SendQQMessage(v.ServerCode, summary, content)
+			for retry := 1; err != nil && retry <= 3; retry++ {
+				log.Println("[-] QQ push failed:", err, "retry:", retry)
+				time.Sleep(2 * time.Second)
+				err = SendQQMessage(v.ServerCode, summary, content)
+			}
+			log.Println("[+] QQ push status:", err)
 			if err != nil {
-				for true {
-					log.Println("[-] 微信通道失败:", err, " 2秒后重新尝试发送.")
-					time.Sleep(2 * time.Second)
-					msgArr2, err2 := wxpusher.SendMessage(msg)
-					log.Println("[+] 微信通道状态:", msgArr2)
-					if err2 == nil {
-						break
-					}
-				}
+				err = fmt.Errorf("server %s qq push: %w", v.ServerCode, err)
+				log.Println("[-]", err)
+				rememberFirstErr(&firstErr, err)
+				continue
 			}
 			v.IsOver = true
 		}
+	}
+	return firstErr
+}
+
+func SendSelfCheckMonitor() error {
+	content := fmt.Sprintf("服务: baozou\n状态: 自检完成\n时间: %s\n正式检测: 08:00 开始", time.Now().Format("2006-01-02 15:04:05"))
+	if os.Getenv("DRY_RUN") == "1" {
+		log.Println("[DRY_RUN] skip self-check qq push:", content)
+		return nil
+	}
+	err := SendQQMessage("monitor", "老乞丐推送程序自检完成-baozou", content)
+	for retry := 1; err != nil && retry <= 3; retry++ {
+		log.Println("[-] self-check QQ push failed:", err, "retry:", retry)
+		time.Sleep(2 * time.Second)
+		err = SendQQMessage("monitor", "老乞丐推送程序自检完成-baozou", content)
+	}
+	log.Println("[+] self-check QQ push status:", err)
+	if err != nil {
+		return fmt.Errorf("self-check qq push: %w", err)
 	}
 	return nil
 }
@@ -175,18 +215,24 @@ func _No() error {
 }
 
 func Run() {
-	c := cron.New(cron.WithSeconds())
-	//早上查询福缘值
-	_, _ = c.AddFunc("0 30 7 * * *", func() { //01 * * * *
-		err := D1()
+	if err := runExclusive(bootstrap); err != nil {
+		log.Fatal(err)
+	}
+
+	c := cron.New(cron.WithSeconds(), cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)))
+	_, _ = c.AddFunc("0 30 7 * * *", func() {
+		err := runExclusive(func() error {
+			if err := D1(); err != nil {
+				return err
+			}
+			return SendSelfCheckMonitor()
+		})
 		if err != nil {
 			log.Println(err)
 		}
 	})
-	//半小时查询
-	_, _ = c.AddFunc("30 0,30 * * * *", func() { //30 0,30 * * * *
-		err := D30()
-		if err != nil {
+	_, _ = c.AddFunc("30 0,30 8-23 * * *", func() {
+		if err := runExclusive(D30); err != nil {
 			log.Println(err)
 		}
 	})

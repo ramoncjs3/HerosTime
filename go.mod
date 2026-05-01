@@ -10,6 +10,5 @@ require (
 	github.com/mojocn/base64Captcha v1.2.2
 	github.com/robfig/cron/v3 v3.0.1
 	github.com/spf13/viper v1.8.1
-	github.com/wxpusher/wxpusher-sdk-go v1.0.3
 	github.com/zc2638/go-standard v0.0.0-20210328074404-6a9e4c40ee58
 )

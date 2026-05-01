@@ -1,4 +1,4 @@
-#项目配置文件
+﻿#项目配置文件
 #当前在用
 
 # 数据库配置
@@ -56,6 +56,39 @@
   "b15":
     "username": "4399madhero"
     "password": "1qaz@WSX"
+  "b16":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b17":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b18":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b19":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b20":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b21":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b22":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b23":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b24":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b25":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "b26":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
 
 #微信推送配置
 "WX_APPTOKEN": "AT_McGwztBJ4aiLglXJy75iSbDFqQBsXPsx"
@@ -75,3 +108,10 @@
   "b13": !!int '4036'
   "b14": !!int '6487'
   "b15": !!int '8473'
+  "b16": !!int '39108'
+  "b17": !!int '39109'
+  "b18": !!int '39110'
+  "b19": !!int '39111'
+  "b20": !!int '39112'
+  "b21": !!int '39113'
+  "b22": !!int '39114'

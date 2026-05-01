@@ -17,6 +17,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 	"time"
 )
@@ -30,9 +31,12 @@ func Test_ce2(t *testing.T) {
 	var url1 = `https://m.4399api.com/openapiv2/oauth.html`
 	var url2 string
 	var ul *url.URL
-	var user = "4399madhero"
-	var pass = "1qaz@WSX"
-	var key = "lzYW5qaXVqa"
+	var user = os.Getenv("BAOZOU_4399_USER")
+	var pass = os.Getenv("BAOZOU_4399_PASS")
+	var key = os.Getenv("BAOZOU_4399_KEY")
+	if user == "" || pass == "" || key == "" {
+		t.Skip("set BAOZOU_4399_USER, BAOZOU_4399_PASS and BAOZOU_4399_KEY to run this integration test")
+	}
 	//var final_state string
 	var deskey = "57493415"
 	var uid string
@@ -94,10 +98,10 @@ func Test_ce2(t *testing.T) {
 }
 
 func Test_aa(t *testing.T) {
-	viper.SetConfigFile("../config/config.yaml") // 指定配置文件
-	viper.AddConfigPath("./")                    // 指定查找配置文件的路径
-	err := viper.ReadInConfig()                  // 读取配置信息
-	if err != nil {                              // 读取配置信息失败
+	viper.SetConfigFile("../app/config/config.yaml") // 指定配置文件
+	viper.AddConfigPath("./")                        // 指定查找配置文件的路径
+	err := viper.ReadInConfig()                      // 读取配置信息
+	if err != nil {                                  // 读取配置信息失败
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 	global.LoginStructList = nil //重置登陆信息
