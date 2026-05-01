@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -41,13 +42,27 @@ func ReqLogin() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	reqUrl := `http://ptlogin.4399.com/ptlogin/login.do`
+	reqUrl := `http://ptlogin.4399.com/ptlogin/login.do?v=1`
 	reqBody := fmt.Sprintf("username=%s&password=%s&sec=1", user, url.QueryEscape(string(encryptPass)))
-	resp, err := Util.ReqPostData(reqUrl, reqBody)
+	req, err := http.NewRequest(http.MethodPost, reqUrl, strings.NewReader(reqBody))
 	if err != nil {
 		return "", err
 	}
-	Pauth := getCookieByName(resp.Response().Cookies(), "Pauth")
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://ptlogin.4399.com")
+	req.Header.Set("Referer", "http://ptlogin.4399.com/ptlogin/loginFrame.do?postLoginHandler=default&displayMode=popup&appId=www_home")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
+	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	Pauth := getCookieByName(resp.Cookies(), "Pauth")
+	if Pauth == "" {
+		return "", fmt.Errorf("ReqLogin empty Pauth, status=%d", resp.StatusCode)
+	}
 	return Pauth, nil
 }
 

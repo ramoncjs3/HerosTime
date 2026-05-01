@@ -30,10 +30,10 @@ func Test_q(t *testing.T) {
 }
 
 func Test_qa(t *testing.T) {
-	viper.SetConfigFile("../config/config.yaml") // 指定配置文件
-	viper.AddConfigPath("./")                    // 指定查找配置文件的路径
-	err := viper.ReadInConfig()                  // 读取配置信息
-	if err != nil {                              // 读取配置信息失败
+	viper.SetConfigFile("../app/config/config.yaml") // 指定配置文件
+	viper.AddConfigPath("./")                        // 指定查找配置文件的路径
+	err := viper.ReadInConfig()                      // 读取配置信息
+	if err != nil {                                  // 读取配置信息失败
 		panic(fmt.Errorf("Fatal error config file: %s \n", err))
 	}
 

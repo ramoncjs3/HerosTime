@@ -302,11 +302,11 @@ func getString(last string, data *dataStruct) (string, bool, error) {
 	c := readBits(data.numBits, data)
 	switch c {
 	case 0:
-		str := string(readBits(8, data))
+		str := string(rune(readBits(8, data)))
 		appendValue(data, str)
 		return str, false, nil
 	case 1:
-		str := string(readBits(16, data))
+		str := string(rune(readBits(16, data)))
 		appendValue(data, str)
 		return str, false, nil
 	case 2:

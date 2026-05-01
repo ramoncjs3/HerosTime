@@ -1,4 +1,4 @@
-#项目配置文件
+﻿#项目配置文件
 #当前在用
 
 # 数据库配置
@@ -38,6 +38,24 @@
   "h5_9":
     "username": "4399madhero"
     "password": "1qaz@WSX"
+  "h5_10":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_11":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_12":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_13":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_14":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
+  "h5_15":
+    "username": "4399madhero"
+    "password": "1qaz@WSX"
 
 #微信推送配置
 "WX_APPTOKEN": "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
@@ -51,3 +69,8 @@
   "h5_7": !!int '2954'
   "h5_8": !!int '4034'
   "h5_9": !!int '6491'
+  "h5_10": !!int '39127'
+  "h5_11": !!int '39128'
+  "h5_12": !!int '39129'
+  "h5_13": !!int '39130'
+  "h5_14": !!int '39131'
