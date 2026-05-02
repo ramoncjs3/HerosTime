@@ -16,9 +16,13 @@ import (
 	"oldbeggar-refactor/internal/httputil"
 )
 
-// pauthTTL is how long a cached Pauth cookie is considered valid.
+// pauthTTL is how long a successfully obtained Pauth cookie is considered valid.
 // 4399 session tokens typically expire after several hours; 6 h is conservative.
 const pauthTTL = 6 * time.Hour
+
+// pauthErrTTL is how long a login error is cached before retrying.
+// Kept short so transient failures (network blip, 500) are retried promptly.
+const pauthErrTTL = 2 * time.Minute
 
 type H5Provider struct {
 	http     *httputil.Client
@@ -48,7 +52,7 @@ func (p *H5Provider) cachedPauth(ctx context.Context, account Account) (string, 
 	if p.pauth != "" && p.pauthKey == key && time.Since(p.pauthAt) < pauthTTL {
 		return p.pauth, nil
 	}
-	if p.pauthErr != nil && p.pauthKey == key && time.Since(p.pauthAt) < pauthTTL {
+	if p.pauthErr != nil && p.pauthKey == key && time.Since(p.pauthAt) < pauthErrTTL {
 		return "", p.pauthErr
 	}
 	pauth, err := p.login4399Cookie(ctx, account)

@@ -163,7 +163,9 @@ func (a *App) checkShopWithEventPrecheck(ctx context.Context) error {
 func (a *App) refreshSessions(ctx context.Context) error {
 	var next []*game.Session
 	var firstErr error
+	skipped := 0
 	skip := func(err error) {
+		skipped++
 		log.Printf("skip session: %v", err)
 		rememberFirstErr(&firstErr, err)
 	}
@@ -250,7 +252,7 @@ func (a *App) refreshSessions(ctx context.Context) error {
 	a.sessionsMu.Unlock()
 
 	if firstErr != nil {
-		log.Printf("WARNING: session refresh completed with failures: ok=%d failed_at_least=1 first_err=%v", len(next), firstErr)
+		log.Printf("WARNING: session refresh completed with failures: ok=%d failed=%d first_err=%v", len(next), skipped, firstErr)
 	}
 	return nil
 }
@@ -533,7 +535,7 @@ func (a *App) sendNotification(ctx context.Context, serverCode, summary, content
 		}
 	}
 	if channels == 0 {
-		return false, errors.New("no notification channel configured")
+		return false, errors.New("no notification channel configured (set qq.api_url or wxpusher.enabled)")
 	}
 	if len(errs) > 0 {
 		return anySucceeded, errors.New(strings.Join(errs, "; "))
