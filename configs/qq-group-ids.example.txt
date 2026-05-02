@@ -1,0 +1,8 @@
+# Put one QQ group id per line.
+# The first 66 groups are assigned to all servers.
+# Remaining groups are written to qq-groups.spare.json.
+#
+# Example:
+# 1000000001
+# 1000000002
+# ...

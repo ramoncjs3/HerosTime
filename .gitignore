@@ -1,0 +1,5 @@
+config.yaml
+configs/*.local.yaml
+state/
+*.exe
+*.log

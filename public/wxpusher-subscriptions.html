@@ -1,0 +1,1009 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>老乞丐推送中心</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%236f9688'/%3E%3Cpath d='M22 24h20M22 32h20M22 40h12' stroke='%23fff8ec' stroke-width='6' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #2f342f;
+      --ink-soft: #4c554b;
+      --muted: #82786a;
+      --line: rgba(94, 103, 88, 0.22);
+      --paper: #f3efe6;
+      --surface: #fbf8f1;
+      --surface-soft: #ebe4d7;
+      --accent: #6f9688;
+      --accent-dark: #55776c;
+      --amber: #b9824f;
+      --amber-soft: rgba(185, 130, 79, 0.14);
+      --soft: #e2eadf;
+      --shadow: 0 24px 56px rgba(86, 78, 64, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      font-family: Inter, "Microsoft YaHei", "PingFang SC", Arial, sans-serif;
+      background:
+        radial-gradient(circle at 12% 0%, rgba(111, 150, 136, 0.12), transparent 34rem),
+        radial-gradient(circle at 82% 10%, rgba(185, 130, 79, 0.1), transparent 30rem),
+        linear-gradient(180deg, #f7f2e8 0%, #f2eee5 46%, #ece6da 100%);
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.16;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 120 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.86' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.36'/%3E%3C/svg%3E");
+      mix-blend-mode: multiply;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button:focus-visible,
+    input:focus-visible,
+    a:focus-visible {
+      outline: 3px solid rgba(111, 150, 136, 0.26);
+      outline-offset: 3px;
+    }
+
+    .page {
+      position: relative;
+      z-index: 1;
+      min-height: 100svh;
+    }
+
+    .hero {
+      position: relative;
+      isolation: isolate;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(320px, 0.72fr);
+      gap: clamp(36px, 6vw, 92px);
+      align-items: center;
+      width: 100%;
+      min-height: min(620px, 82svh);
+      margin: 0;
+      padding: clamp(40px, 7vw, 96px) max(20px, calc((100vw - 1160px) / 2)) 48px;
+      overflow: hidden;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 8% 18%, rgba(255, 248, 236, 0.72), transparent 24rem),
+        linear-gradient(135deg, #e8ecdf 0%, #f6f1e8 52%, #e7dfd1 100%);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(90deg, transparent 0%, rgba(111, 150, 136, 0.08) 58%, transparent 100%),
+        linear-gradient(180deg, rgba(185, 130, 79, 0.08) 0%, transparent 46%);
+    }
+
+    .hero > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: rgba(47, 52, 47, 0.86);
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 22px;
+    }
+
+    .brand-mark {
+      width: 36px;
+      height: 36px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--amber);
+      color: #fff8ec;
+      font-weight: 800;
+      box-shadow: 0 10px 28px rgba(214, 154, 95, 0.18);
+    }
+
+    h1 {
+      margin: 0;
+      max-width: 560px;
+      font-size: clamp(42px, 5.4vw, 64px);
+      line-height: 1.08;
+      font-weight: 850;
+    }
+
+    h1 span {
+      display: block;
+    }
+
+    .lead {
+      max-width: 560px;
+      margin: 22px 0 0;
+      color: rgba(76, 85, 75, 0.86);
+      font-size: clamp(16px, 1.7vw, 18px);
+      line-height: 1.68;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 28px;
+    }
+
+    .primary,
+    .secondary,
+    .copy {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0 18px;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fffdf6;
+      font-weight: 700;
+      box-shadow: 0 16px 34px rgba(111, 150, 136, 0.18);
+    }
+
+    .secondary {
+      background: transparent;
+      border-color: rgba(94, 103, 88, 0.24);
+      color: var(--ink);
+      font-weight: 700;
+    }
+
+    .primary:hover,
+    .secondary:hover,
+    .copy:hover,
+    .empty-reset:hover {
+      transform: translateY(-1px);
+    }
+
+    .download-brief {
+      max-width: 430px;
+      justify-self: end;
+      border-left: 1px solid var(--line);
+      padding-left: clamp(24px, 4vw, 44px);
+      color: rgba(76, 85, 75, 0.86);
+      animation: rise 700ms ease both;
+    }
+
+    .brief-kicker {
+      margin-bottom: 14px;
+      color: rgba(143, 94, 55, 0.84);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brief-title {
+      margin: 0 0 8px;
+      color: var(--ink);
+      font-size: clamp(22px, 2.2vw, 30px);
+      line-height: 1.22;
+      font-weight: 800;
+    }
+
+    .brief-copy {
+      margin: 0 0 20px;
+      color: rgba(130, 120, 106, 0.88);
+      line-height: 1.65;
+    }
+
+    .brief-list {
+      display: grid;
+      border-top: 1px solid var(--line);
+    }
+
+    .brief-step {
+      display: grid;
+      grid-template-columns: 32px 1fr;
+      gap: 14px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .step-index {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--soft);
+      color: var(--accent-dark);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .step-title {
+      display: block;
+      color: var(--ink);
+      font-weight: 800;
+      margin-bottom: 4px;
+    }
+
+    .step-text {
+      display: block;
+      color: rgba(130, 120, 106, 0.84);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .toolbar {
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      -webkit-backdrop-filter: blur(18px);
+      backdrop-filter: blur(18px);
+      background: rgba(247, 242, 232, 0.82);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .toolbar-inner {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) auto;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 0;
+    }
+
+    .search {
+      width: 100%;
+      min-height: 42px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(251, 248, 241, 0.86);
+      color: var(--ink);
+      padding: 0 14px;
+      outline: none;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.42);
+    }
+
+    .search:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px rgba(111, 150, 136, 0.16);
+    }
+
+    .filters {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+
+    .filter {
+      white-space: nowrap;
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(251, 248, 241, 0.78);
+      color: var(--muted);
+      padding: 0 12px;
+      cursor: pointer;
+    }
+
+    .filter.active {
+      color: #fffdf6;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    main {
+      width: min(1160px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 34px 0 68px;
+    }
+
+    .notice {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+      padding: 18px 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .notice > div {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notice strong {
+      display: block;
+      color: var(--ink);
+      margin-bottom: 4px;
+    }
+
+    .sections {
+      display: grid;
+      gap: 34px;
+      margin-top: 34px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+
+    .section-head h2 {
+      margin: 0;
+      font-size: clamp(24px, 3vw, 34px);
+      color: var(--ink-soft);
+    }
+
+    .count {
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      min-height: 96px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(251, 248, 241, 0.76);
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+      padding: 16px;
+      box-shadow:
+        0 14px 34px rgba(86, 78, 64, 0.1),
+        inset 0 1px 0 rgba(255, 255, 255, 0.62);
+      animation: fade 360ms ease both;
+      transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+    }
+
+    .item:hover {
+      transform: translateY(-4px) scale(1.01);
+      border-color: rgba(111, 150, 136, 0.42);
+      box-shadow:
+        0 24px 34px -12px rgba(86, 78, 64, 0.18),
+        0 12px 18px -12px rgba(111, 150, 136, 0.18);
+    }
+
+    .item-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+      font-size: 18px;
+      font-weight: 800;
+    }
+
+    .tag {
+      min-width: 42px;
+      min-height: 28px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 7px;
+      background: var(--soft);
+      color: var(--accent-dark);
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .link-text {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      color: var(--muted);
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .icon {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 auto;
+    }
+
+    .copy {
+      background: var(--surface);
+      border-color: var(--line);
+      color: var(--ink);
+      font-weight: 700;
+      min-width: 72px;
+    }
+
+    .open {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 44px;
+      min-width: 82px;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fffdf6;
+      font-weight: 800;
+      text-decoration: none;
+      transition: transform 160ms ease, background 160ms ease;
+    }
+
+    .open:hover {
+      transform: translateY(-1px);
+      background: var(--accent-dark);
+    }
+
+    .empty {
+      display: none;
+      justify-items: center;
+      gap: 10px;
+      padding: 80px 20px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: rgba(251, 248, 241, 0.56);
+      margin-top: 34px;
+    }
+
+    .empty-icon {
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border-radius: 8px;
+      color: var(--accent-dark);
+      background: var(--soft);
+      margin-bottom: 6px;
+    }
+
+    .empty-icon svg {
+      width: 24px;
+      height: 24px;
+    }
+
+    .empty h3 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 18px;
+    }
+
+    .empty p {
+      max-width: 320px;
+      margin: 0 0 12px;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .empty-reset {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(calc(100% + 48px));
+      background: #4c554b;
+      color: #fff8ec;
+      border-radius: 8px;
+      padding: 12px 16px;
+      font-weight: 700;
+      box-shadow: 0 18px 42px rgba(8, 17, 31, 0.24);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 220ms ease, opacity 220ms ease;
+      z-index: 20;
+    }
+
+    .toast.show {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    @keyframes rise {
+      from {
+        opacity: 0;
+        transform: translateY(14px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fade {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 920px) {
+      .hero {
+        grid-template-columns: 1fr;
+        min-height: auto;
+        background:
+          radial-gradient(circle at 8% 12%, rgba(255, 248, 236, 0.68), transparent 22rem),
+          linear-gradient(135deg, #e8ecdf 0%, #f6f1e8 100%);
+      }
+
+      .hero::after {
+        inset: 0;
+      }
+
+      .download-brief {
+        justify-self: stretch;
+        max-width: none;
+      }
+
+      .toolbar-inner {
+        grid-template-columns: 1fr;
+      }
+
+      .grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      .toolbar-inner,
+      main {
+        width: min(100% - 28px, 1160px);
+      }
+
+      .hero {
+        padding: 28px 14px 34px;
+        background: linear-gradient(135deg, #e8ecdf 0%, #f6f1e8 100%);
+      }
+
+      .hero::after,
+      .download-brief {
+        display: none;
+      }
+
+      h1 {
+        font-size: clamp(40px, 12vw, 52px);
+      }
+
+      .lead {
+        line-height: 1.6;
+      }
+
+      .hero-actions {
+        display: grid;
+        grid-template-columns: 1fr;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        overflow: visible;
+      }
+
+      .filter {
+        width: 100%;
+        padding: 0 8px;
+      }
+
+      .notice,
+      .section-head {
+        display: block;
+      }
+
+      .notice > div + div {
+        margin-top: 14px;
+      }
+
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .item {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page">
+    <section class="hero">
+      <div>
+        <div class="brand"><span class="brand-mark">乞</span><span>老乞丐提醒</span></div>
+        <h1><span>下载软件</span><span>接收推送</span></h1>
+        <p class="lead">找到自己的区服，打开推送入口并完成绑定。后续出现提醒时，会自动推送到你的设备。</p>
+        <div class="hero-actions">
+          <button class="primary" type="button" data-scroll="#subscriptions">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M8 6h13"></path>
+              <path d="M8 12h13"></path>
+              <path d="M8 18h13"></path>
+              <path d="M3 6h.01"></path>
+              <path d="M3 12h.01"></path>
+              <path d="M3 18h.01"></path>
+            </svg>
+            <span>选择区服</span>
+          </button>
+          <button class="secondary" type="button" id="copyAll">
+            <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>复制全部入口</span>
+          </button>
+        </div>
+      </div>
+      <div class="download-brief" aria-label="下载软件流程">
+        <div class="brief-kicker">安装流程</div>
+        <h2 class="brief-title">按区服打开入口，完成软件绑定</h2>
+        <p class="brief-copy">页面只负责分发入口。安装、绑定和后续接收都在推送软件里完成。</p>
+        <div class="brief-list">
+          <div class="brief-step">
+            <span class="step-index">01</span>
+            <span>
+              <strong class="step-title">选择区服</strong>
+              <span class="step-text">先确认官方、混服、苹果、H5 或暴走区服。</span>
+            </span>
+          </div>
+          <div class="brief-step">
+            <span class="step-index">02</span>
+            <span>
+              <strong class="step-title">打开入口</strong>
+              <span class="step-text">按入口页提示下载软件并完成绑定。</span>
+            </span>
+          </div>
+          <div class="brief-step">
+            <span class="step-index">03</span>
+            <span>
+              <strong class="step-title">接收推送</strong>
+              <span class="step-text">绑定后，该区服提醒会推送到你的设备。</span>
+            </span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="toolbar">
+      <div class="toolbar-inner">
+        <input id="search" class="search" type="search" placeholder="搜索区服，例如 g1、混服10、h5_3、暴走" autocomplete="off">
+        <div class="filters" role="tablist" aria-label="区服分类">
+          <button class="filter active" type="button" data-filter="all">全部</button>
+          <button class="filter" type="button" data-filter="official">官方</button>
+          <button class="filter" type="button" data-filter="mixed">混服</button>
+          <button class="filter" type="button" data-filter="apple">苹果</button>
+          <button class="filter" type="button" data-filter="h5">H5</button>
+          <button class="filter" type="button" data-filter="baozou">暴走</button>
+        </div>
+      </div>
+    </div>
+
+    <main id="subscriptions">
+      <div class="notice">
+        <div><strong>按区服查找</strong>官方、混服、苹果、H5、暴走都在这里。</div>
+        <div><strong>一键打开</strong>点“打开”进入软件推送入口。</div>
+        <div><strong>便于转发</strong>复制单个区服，或一次复制全部推送入口。</div>
+      </div>
+
+      <div class="sections" id="sections"></div>
+      <div class="empty" id="empty">
+        <div class="empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <path d="m21 21-4.3-4.3"></path>
+          </svg>
+        </div>
+        <h3>未找到相关区服</h3>
+        <p>请尝试输入其他关键词，如 g1、混服10 或暴走。</p>
+        <button class="empty-reset" type="button" id="clearSearch">清除搜索</button>
+      </div>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite">已复制</div>
+
+  <script>
+    const TOPICS = {
+      g1: 44234,
+      g2: 44235,
+      g3: 44236,
+      h1: 44237,
+      h2: 44238,
+      h3: 44239,
+      h4: 44240,
+      h5: 44241,
+      h6: 44242,
+      h7: 44243,
+      h8: 44244,
+      h9: 44245,
+      h10: 44246,
+      h11: 44247,
+      h12: 44248,
+      h13: 44249,
+      h14: 44250,
+      h15: 44251,
+      h16: 44252,
+      h17: 44253,
+      h18: 44254,
+      h19: 44255,
+      h20: 44256,
+      h21: 44257,
+      h22: 44258,
+      h23: 44259,
+      h24: 44260,
+      a1: 44261,
+      h5_1: 44262,
+      h5_2: 44263,
+      h5_3: 44264,
+      h5_4: 44265,
+      h5_5: 44266,
+      h5_6: 44267,
+      h5_7: 44268,
+      h5_8: 44269,
+      h5_9: 44270,
+      h5_10: 44271,
+      h5_11: 44272,
+      h5_12: 44273,
+      h5_13: 44274,
+      h5_14: 44275,
+      h5_15: 44276,
+      b1: 44277,
+      b2: 44278,
+      b3: 44279,
+      b4: 44280,
+      b5: 44281,
+      b6: 44282,
+      b7: 44283,
+      b8: 44284,
+      b9: 44285,
+      b10: 44286,
+      b11: 44287,
+      b12: 44288,
+      b13: 44289,
+      b14: 44290,
+      b15: 44291,
+      b16: 44292,
+      b17: 44293,
+      b18: 44294,
+      b19: 44295,
+      b20: 44296,
+      b21: 44297,
+      b22: 44298,
+      b23: 44299,
+      b24: 44300,
+      b25: 44301,
+      b26: 44302
+    };
+
+    const GROUPS = [
+      { id: "official", title: "官方服", match: code => /^g\d+$/.test(code), label: code => `官方${numberPart(code)}区` },
+      { id: "mixed", title: "混服", match: code => /^h\d+$/.test(code), label: code => `混服${numberPart(code)}区` },
+      { id: "apple", title: "苹果服", match: code => /^a\d+$/.test(code), label: code => `苹果${numberPart(code)}区` },
+      { id: "h5", title: "H5 暴走", match: code => /^h5_\d+$/.test(code), label: code => `H5暴走${numberPart(code)}区` },
+      { id: "baozou", title: "暴走服", match: code => /^b\d+$/.test(code), label: code => `暴走${numberPart(code)}区` }
+    ];
+
+    const state = {
+      filter: "all",
+      query: ""
+    };
+
+    const ICONS = {
+      copy: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>`,
+      arrow: `<svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>`
+    };
+
+    function numberPart(code) {
+      const match = code.match(/(\d+)$/);
+      return match ? match[1] : code;
+    }
+
+    function linkFor(topicId) {
+      return `https://wxpusher.zjiecode.com/wxuser/?type=2&id=${topicId}#/follow`;
+    }
+
+    function groupFor(code) {
+      return GROUPS.find(group => group.match(code));
+    }
+
+    function topicRows() {
+      return Object.entries(TOPICS)
+        .map(([code, topicId]) => {
+          const group = groupFor(code);
+          return {
+            code,
+            topicId,
+            groupId: group ? group.id : "other",
+            groupTitle: group ? group.title : "其它",
+            name: group ? group.label(code) : code,
+            link: linkFor(topicId)
+          };
+        })
+        .sort((a, b) => {
+          const ga = GROUPS.findIndex(group => group.id === a.groupId);
+          const gb = GROUPS.findIndex(group => group.id === b.groupId);
+          if (ga !== gb) return ga - gb;
+          return Number(numberPart(a.code)) - Number(numberPart(b.code));
+        });
+    }
+
+    function render() {
+      const sections = document.getElementById("sections");
+      const empty = document.getElementById("empty");
+      const query = state.query.trim().toLowerCase();
+      const rows = topicRows().filter(row => {
+        const inGroup = state.filter === "all" || row.groupId === state.filter;
+        const haystack = `${row.code} ${row.name} ${row.topicId}`.toLowerCase();
+        return inGroup && (!query || haystack.includes(query));
+      });
+
+      sections.innerHTML = "";
+      empty.style.display = rows.length ? "none" : "grid";
+
+      const grouped = GROUPS
+        .map(group => ({ ...group, rows: rows.filter(row => row.groupId === group.id) }))
+        .filter(group => group.rows.length);
+
+      for (const group of grouped) {
+        const section = document.createElement("section");
+        section.className = "section";
+        section.dataset.group = group.id;
+
+        const head = document.createElement("div");
+        head.className = "section-head";
+        head.innerHTML = `<h2>${group.title}</h2><span class="count">${group.rows.length} 个区服</span>`;
+
+        const grid = document.createElement("div");
+        grid.className = "grid";
+        for (const row of group.rows) {
+          const item = document.createElement("article");
+          item.className = "item";
+          item.innerHTML = `
+            <div>
+              <div class="item-title"><span class="tag">${row.code}</span><span>${row.name}</span></div>
+              <div class="link-text">软件推送入口</div>
+            </div>
+            <div class="actions">
+              <button class="copy" type="button" data-link="${row.link}">${ICONS.copy}<span>复制</span></button>
+              <a class="open" href="${row.link}" target="_blank" rel="noopener"><span>打开</span>${ICONS.arrow}</a>
+            </div>
+          `;
+          grid.appendChild(item);
+        }
+
+        section.appendChild(head);
+        section.appendChild(grid);
+        sections.appendChild(section);
+      }
+    }
+
+    async function copyText(text) {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+      const area = document.createElement("textarea");
+      area.value = text;
+      area.style.position = "fixed";
+      area.style.opacity = "0";
+      document.body.appendChild(area);
+      area.select();
+      document.execCommand("copy");
+      area.remove();
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById("toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      clearTimeout(showToast.timer);
+      showToast.timer = setTimeout(() => toast.classList.remove("show"), 1800);
+    }
+
+    document.addEventListener("click", async event => {
+      const copyButton = event.target.closest("[data-link]");
+      if (copyButton) {
+        await copyText(copyButton.dataset.link);
+        showToast("推送入口已复制");
+        return;
+      }
+
+      const filter = event.target.closest("[data-filter]");
+      if (filter) {
+        state.filter = filter.dataset.filter;
+        document.querySelectorAll(".filter").forEach(button => button.classList.toggle("active", button === filter));
+        render();
+        return;
+      }
+
+      const scrollButton = event.target.closest("[data-scroll]");
+      if (scrollButton) {
+        document.querySelector(scrollButton.dataset.scroll).scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+
+    document.getElementById("search").addEventListener("input", event => {
+      state.query = event.target.value;
+      render();
+    });
+
+    document.getElementById("clearSearch").addEventListener("click", () => {
+      const search = document.getElementById("search");
+      search.value = "";
+      state.query = "";
+      render();
+      search.focus();
+    });
+
+    document.getElementById("copyAll").addEventListener("click", async () => {
+      const text = topicRows().map(row => `${row.name} (${row.code}): ${row.link}`).join("\n");
+      await copyText(text);
+      showToast("全部推送入口已复制");
+    });
+
+    render();
+  </script>
+</body>
+</html>
