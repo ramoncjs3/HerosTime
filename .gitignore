@@ -1,5 +1,5 @@
 config.yaml
 configs/*.local.yaml
-state/
+/state/
 *.exe
 *.log
