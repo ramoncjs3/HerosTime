@@ -3,3 +3,4 @@ configs/*.local.yaml
 /state/
 *.exe
 *.log
+.worktrees/
