@@ -1,121 +1,14 @@
-﻿#项目配置文件
-#当前在用
-
-# 数据库配置
 "Database":
   "username": "root"
   "password": ""
   "hostname": "127.0.0.1:3306"
   "dbname": "herosgame"
 
-
-  #账号配置
 "Account":
-  "g1":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "g2":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "g3":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h1":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h2":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h3":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h4":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h5":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h6":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h7":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h8":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h9":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h10":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h11":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h12":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h13":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h14":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h15":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h16":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h17":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h18":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h19":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h20":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h21":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h22":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h23":
-    "username": "tfyiran397496548"
-    "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
-  "h24":
+  "a1":
     "username": "tfyiran397496548"
     "password": "md5:bbb3ec062b9ed22548ecd1938a66949e"
 
-#微信推送配置
 "WX_APPTOKEN": "AT_vYeuEDdRy41tuBxjfoN22MS1eudEMAF8"
 "WX_Topic":
-  "g1": !!int '2869'
-  "g2": !!int '2883'
-  "g3": !!int '2884'
-  "h1": !!int '2885'
-  "h2": !!int '2886'
-  "h3": !!int '2887'
-  "h4": !!int '2888'
-  "h5": !!int '2889'
-  "h6": !!int '2879'
-  "h7": !!int '2890'
-  "h8": !!int '2891'
-  "h9": !!int '2892'
-  "h10": !!int '2893'
-  "h11": !!int '4035'
-  "h12": !!int '6490'
-  "h13": !!int '8475'
-  "h14": !!int '32030'
-  "h15": !!int '32031'
-  "h16": !!int '32032'
-  "h17": !!int '32033'
-  "h18": !!int '32034'
-  "h19": !!int '32035'
-  "h20": !!int '32036'
+  "a1": !!int '44261'

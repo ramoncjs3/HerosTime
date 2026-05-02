@@ -18,7 +18,7 @@ func GetServerList() error {
 		return err
 	}
 
-	reqBodys := "a515314766c66a0146918898435cb2c08938a1cf3899c350cd905566983202334bea7b42c11ddb6b32cf21a1e61ec92ce74011509d3e126e12091d5f8590ce8c98987160177e7d91ea8b118e2429484a6b6ca73e366b3bb7acbfb8cc2db804ca"
+	reqBodys := "a515314766c66a0146918898435cb2c08938a1cf3899c350cd905566983202334bea7b42c11ddb6b32cf21a1e61ec92ce74011509d3e126e12091d5f8590ce8cf18e9dd0193e1110c359241f02af452deb07ad8b6d79ee11d9c327d08863e025"
 	resp, err := utils.ReqPostData(fmt.Sprintf("http://%s:9898/GetServerList", bsvrlst["0"][0]), reqBodys)
 	if err != nil {
 		return err

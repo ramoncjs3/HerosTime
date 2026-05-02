@@ -166,16 +166,16 @@ func D30() error {
 }
 
 func SendSelfCheckMonitor() error {
-	content := fmt.Sprintf("服务: official\n状态: 自检完成\n时间: %s\n正式检测: 08:00 开始", time.Now().Format("2006-01-02 15:04:05"))
+	content := fmt.Sprintf("服务: apple\n状态: 自检完成\n时间: %s\n正式检测: 08:00 开始", time.Now().Format("2006-01-02 15:04:05"))
 	if os.Getenv("DRY_RUN") == "1" {
 		log.Println("[DRY_RUN] skip self-check qq push:", content)
 		return nil
 	}
-	err := SendQQMessage("monitor", "老乞丐推送程序自检完成-official", content)
+	err := SendQQMessage("monitor", "老乞丐推送程序自检完成-apple", content)
 	for retry := 1; err != nil && retry <= 3; retry++ {
 		log.Println("[-] self-check QQ push failed:", err, "retry:", retry)
 		time.Sleep(2 * time.Second)
-		err = SendQQMessage("monitor", "老乞丐推送程序自检完成-official", content)
+		err = SendQQMessage("monitor", "老乞丐推送程序自检完成-apple", content)
 	}
 	log.Println("[+] self-check QQ push status:", err)
 	if err != nil {

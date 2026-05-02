@@ -115,16 +115,9 @@ func Test_ce(t *testing.T) {
 }
 
 func Test_a(t *testing.T) {
-	a, b, err := loginutil.ChooseServer("g1")
+	a, b, err := loginutil.ChooseServer("a1")
 	if err != nil {
 		return
 	}
 	log.Println(a, b)
-
-	c, d, err := loginutil.ChooseServer("h6")
-	if err != nil {
-		return
-	}
-	log.Println(c, d)
-
 }

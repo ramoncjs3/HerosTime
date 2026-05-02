@@ -10,8 +10,7 @@ func main() {
 	if err := loginutil.GetServerList(); err != nil {
 		panic(err)
 	}
-	printExisting("g", 80)
-	printExisting("h", 80)
+	printExisting("a", 80)
 }
 
 func printExisting(prefix string, max int) {

@@ -27,13 +27,9 @@ func ChooseServer(servercode string) (string, string, error) {
 		}
 		name, _ := entry[5].(string)
 		code := ""
-		if strings.HasPrefix(name, "官方") {
+		if strings.HasPrefix(name, "苹果") {
 			if n := zoneNumber(name); n > 0 {
-				code = fmt.Sprintf("g%d", n)
-			}
-		} else if strings.HasPrefix(name, "混服") {
-			if n := zoneNumber(name); n > 0 {
-				code = fmt.Sprintf("h%d", n)
+				code = fmt.Sprintf("a%d", n)
 			}
 		}
 		if code != "" {
