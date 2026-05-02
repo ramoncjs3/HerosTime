@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Luzifer/go-openssl/v4"
 
@@ -15,12 +16,21 @@ import (
 	"oldbeggar-refactor/internal/httputil"
 )
 
+// pauthTTL is how long a successfully obtained Pauth cookie is considered valid.
+// 4399 session tokens typically expire after several hours; 6 h is conservative.
+const pauthTTL = 6 * time.Hour
+
+// pauthErrTTL is how long a login error is cached before retrying.
+// Kept short so transient failures (network blip, 500) are retried promptly.
+const pauthErrTTL = 2 * time.Minute
+
 type H5Provider struct {
 	http     *httputil.Client
 	cfg      config.AuthConfig
 	pauthMu  sync.Mutex
 	pauthKey string
 	pauth    string
+	pauthAt  time.Time
 	pauthErr error
 }
 
@@ -39,19 +49,21 @@ func (p *H5Provider) cachedPauth(ctx context.Context, account Account) (string, 
 	key := account.Username + "\x00" + account.Password
 	p.pauthMu.Lock()
 	defer p.pauthMu.Unlock()
-	if p.pauth != "" && p.pauthKey == key {
+	if p.pauth != "" && p.pauthKey == key && time.Since(p.pauthAt) < pauthTTL {
 		return p.pauth, nil
 	}
-	if p.pauthErr != nil && p.pauthKey == key {
+	if p.pauthErr != nil && p.pauthKey == key && time.Since(p.pauthAt) < pauthErrTTL {
 		return "", p.pauthErr
 	}
 	pauth, err := p.login4399Cookie(ctx, account)
 	if err != nil {
 		p.pauthKey = key
+		p.pauthAt = time.Now()
 		p.pauthErr = err
 		return "", err
 	}
 	p.pauthKey = key
+	p.pauthAt = time.Now()
 	p.pauth = pauth
 	p.pauthErr = nil
 	return pauth, nil
