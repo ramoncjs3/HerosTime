@@ -11,7 +11,7 @@ For 100 QQ groups, this plan assigns one group to each server and keeps 34 group
 Usage:
 
 ```powershell
-cd path\to\oldbeggar-refactor
+cd D:\bzyxt\老乞丐推送\oldbeggar-refactor
 powershell -ExecutionPolicy Bypass -File tools\qq_group_plan.ps1 -InputFile configs\qq-group-ids.local.txt -OutDir configs
 ```
 

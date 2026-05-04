@@ -37,6 +37,18 @@ type App struct {
 	sessions   []*game.Session
 }
 
+type RuntimeSnapshot struct {
+	Sessions     []SessionInfo `json:"sessions"`
+	SessionCount int           `json:"session_count"`
+}
+
+type SessionInfo struct {
+	VariantName string  `json:"variant_name"`
+	Kind        string  `json:"kind"`
+	ServerCode  string  `json:"server_code"`
+	RoleID      float64 `json:"role_id,omitempty"`
+}
+
 const (
 	oldBeggarSource  = "oldbeggar"
 	noticeShopSource = "notice_shop"
@@ -59,7 +71,7 @@ func New(cfg *config.Config) (*App, error) {
 	if err != nil {
 		return nil, err
 	}
-	stateStore, err := state.Open(cfg.App.StateFile)
+	stateStore, err := state.Open(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -88,14 +100,14 @@ func (a *App) Run(ctx context.Context) error {
 		cron.WithChain(cron.SkipIfStillRunning(cron.DefaultLogger)),
 	)
 	if _, err := scheduler.AddFunc(a.cfg.Schedules.RefreshSessions, func() {
-		if err := a.SelfCheck(ctx); err != nil {
+		if err := a.SelfCheck(context.Background()); err != nil {
 			log.Printf("self-check job failed: %v", err)
 		}
 	}); err != nil {
 		return fmt.Errorf("add refresh schedule: %w", err)
 	}
 	if _, err := scheduler.AddFunc(a.cfg.Schedules.CheckShop, func() {
-		if err := a.CheckShop(ctx); err != nil {
+		if err := a.CheckShop(context.Background()); err != nil {
 			log.Printf("check job failed: %v", err)
 		}
 	}); err != nil {
@@ -147,6 +159,49 @@ func (a *App) CheckShop(ctx context.Context) error {
 	return a.checkShopWithEventPrecheck(ctx)
 }
 
+func (a *App) Snapshot() RuntimeSnapshot {
+	sessions := a.sessionSnapshot()
+	out := RuntimeSnapshot{
+		Sessions:     make([]SessionInfo, 0, len(sessions)),
+		SessionCount: len(sessions),
+	}
+	for _, session := range sessions {
+		out.Sessions = append(out.Sessions, SessionInfo{
+			VariantName: session.VariantName,
+			Kind:        session.Kind,
+			ServerCode:  session.ServerCode,
+			RoleID:      session.RoleID,
+		})
+	}
+	return out
+}
+
+func (a *App) StateSnapshot() map[string]state.ServerState {
+	return a.state.Snapshot()
+}
+
+func (a *App) StateEvents(limit int) []state.Event {
+	return a.state.Events(limit)
+}
+
+func (a *App) ApplyExpansionDestinations(record config.ExpansionRecord) {
+	if record.WxPusherTopicID > 0 {
+		a.wxpusher.SetTopicID(record.Server, record.WxPusherTopicID)
+	}
+	if strings.TrimSpace(record.QQGroupID) != "" {
+		a.qq.SetGroupID(record.Server, record.QQGroupID)
+	}
+}
+
+func (a *App) RemoveExpansionDestinations(record config.ExpansionRecord) {
+	if record.WxPusherTopicID > 0 {
+		a.wxpusher.RemoveTopicID(record.Server, record.WxPusherTopicID)
+	}
+	if strings.TrimSpace(record.QQGroupID) != "" {
+		a.qq.RemoveGroupID(record.Server, record.QQGroupID)
+	}
+}
+
 func (a *App) checkShopWithEventPrecheck(ctx context.Context) error {
 	var firstErr error
 	if err := a.markExistingEventOver(ctx); err != nil {
@@ -163,9 +218,7 @@ func (a *App) checkShopWithEventPrecheck(ctx context.Context) error {
 func (a *App) refreshSessions(ctx context.Context) error {
 	var next []*game.Session
 	var firstErr error
-	skipped := 0
 	skip := func(err error) {
-		skipped++
 		log.Printf("skip session: %v", err)
 		rememberFirstErr(&firstErr, err)
 	}
@@ -252,7 +305,7 @@ func (a *App) refreshSessions(ctx context.Context) error {
 	a.sessionsMu.Unlock()
 
 	if firstErr != nil {
-		log.Printf("WARNING: session refresh completed with failures: ok=%d failed=%d first_err=%v", len(next), skipped, firstErr)
+		log.Printf("session refresh completed with skipped servers: %v", firstErr)
 	}
 	return nil
 }
@@ -453,20 +506,12 @@ func (a *App) notifyShopItems(ctx context.Context, session *game.Session, date s
 		} else {
 			log.Printf("[dry-run] server=%s source=%s items=%s", session.ServerCode, check.label, game.MessageContent(items))
 		}
-		// dry_run 不写入 state，确保切换为正式运行后仍能正常推送
-		return nil
+		return a.state.Mark(key, date, "dry_run", items)
 	}
-	anySucceeded, pushErr := a.sendNotification(ctx, session.ServerCode, summary, content)
-	if pushErr != nil && !anySucceeded {
-		// 所有通道均失败，不标记 state，下次调度仍会重试
-		return fmt.Errorf("%s %s push: %w", session.ServerCode, check.label, pushErr)
+	if err := a.sendNotification(ctx, session.ServerCode, summary, content); err != nil {
+		return fmt.Errorf("%s %s push: %w", session.ServerCode, check.label, err)
 	}
-	if pushErr != nil {
-		// 至少一个通道成功，标记 state 防止重复推送，同时记录失败通道
-		log.Printf("WARNING: partial push: server=%s source=%s err=%v", session.ServerCode, check.label, pushErr)
-	} else {
-		log.Printf("notified: server=%s source=%s items=%s", session.ServerCode, check.label, game.MessageContent(items))
-	}
+	log.Printf("notified: server=%s source=%s items=%s", session.ServerCode, check.label, game.MessageContent(items))
 	return a.state.Mark(key, date, status, items)
 }
 
@@ -512,35 +557,28 @@ func sourceStateKey(source, serverCode string) string {
 	return source + ":" + serverCode
 }
 
-// sendNotification sends to all configured channels.
-// Returns (anySucceeded, err): anySucceeded is true if at least one channel delivered
-// successfully. err is non-nil if any channel failed or no channel is configured.
-func (a *App) sendNotification(ctx context.Context, serverCode, summary, content string) (anySucceeded bool, err error) {
+func (a *App) sendNotification(ctx context.Context, serverCode, summary, content string) error {
 	channels := 0
 	var errs []string
 	if a.qqEnabled() {
 		channels++
-		if sendErr := a.qq.Send(ctx, serverCode, summary, content); sendErr != nil {
-			errs = append(errs, "qq: "+sendErr.Error())
-		} else {
-			anySucceeded = true
+		if err := a.qq.Send(ctx, serverCode, summary, content); err != nil {
+			errs = append(errs, "qq: "+err.Error())
 		}
 	}
 	if a.wxpusher.Enabled() {
 		channels++
-		if sendErr := a.wxpusher.Send(ctx, serverCode, summary, content); sendErr != nil {
-			errs = append(errs, "wxpusher: "+sendErr.Error())
-		} else {
-			anySucceeded = true
+		if err := a.wxpusher.Send(ctx, serverCode, summary, content); err != nil {
+			errs = append(errs, "wxpusher: "+err.Error())
 		}
 	}
 	if channels == 0 {
-		return false, errors.New("no notification channel configured (set qq.api_url or wxpusher.enabled)")
+		return errors.New("no notification channel configured")
 	}
 	if len(errs) > 0 {
-		return anySucceeded, errors.New(strings.Join(errs, "; "))
+		return errors.New(strings.Join(errs, "; "))
 	}
-	return true, nil
+	return nil
 }
 
 func (a *App) qqEnabled() bool {

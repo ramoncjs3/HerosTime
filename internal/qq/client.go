@@ -19,14 +19,41 @@ type Client struct {
 	http     *httputil.Client
 	config   config.QQConfig
 	sendMu   sync.Mutex
+	mapMu    sync.RWMutex
 	lastSent time.Time
 }
 
 func NewClient(httpClient *httputil.Client, cfg config.QQConfig) *Client {
 	if cfg.GroupMap == nil {
 		cfg.GroupMap = map[string]string{}
+	} else {
+		cfg.GroupMap = cloneGroupMap(cfg.GroupMap)
 	}
 	return &Client{http: httpClient, config: cfg}
+}
+
+func (c *Client) SetGroupID(serverCode, groupID string) {
+	serverCode = strings.TrimSpace(serverCode)
+	groupID = strings.TrimSpace(groupID)
+	if serverCode == "" || groupID == "" {
+		return
+	}
+	c.mapMu.Lock()
+	defer c.mapMu.Unlock()
+	c.config.GroupMap[serverCode] = groupID
+}
+
+func (c *Client) RemoveGroupID(serverCode, groupID string) {
+	serverCode = strings.TrimSpace(serverCode)
+	groupID = strings.TrimSpace(groupID)
+	if serverCode == "" || groupID == "" {
+		return
+	}
+	c.mapMu.Lock()
+	defer c.mapMu.Unlock()
+	if c.config.GroupMap[serverCode] == groupID {
+		delete(c.config.GroupMap, serverCode)
+	}
 }
 
 func (c *Client) Send(ctx context.Context, serverCode, summary, content string) error {
@@ -137,7 +164,10 @@ func (c *Client) groupID(serverCode string) string {
 	if id := strings.TrimSpace(os.Getenv("QQ_GROUP_ID_" + envServerCode(serverCode))); id != "" {
 		return id
 	}
-	if id := strings.TrimSpace(c.config.GroupMap[serverCode]); id != "" {
+	c.mapMu.RLock()
+	id := strings.TrimSpace(c.config.GroupMap[serverCode])
+	c.mapMu.RUnlock()
+	if id != "" {
 		return id
 	}
 	if id := c.groupIDFromFile(serverCode); id != "" {
@@ -203,4 +233,12 @@ func trimBody(body []byte) string {
 		return text[:300]
 	}
 	return text
+}
+
+func cloneGroupMap(in map[string]string) map[string]string {
+	out := make(map[string]string, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
 }

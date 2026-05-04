@@ -10,9 +10,22 @@ services:
     command: ["-config", "/app/configs/config.local.yaml", "-mode", "run"]
     environment:
       TZ: Asia/Shanghai
+      OLDBEGGAR_ADMIN_ENABLED: ${OLDBEGGAR_ADMIN_ENABLED:-0}
+      OLDBEGGAR_ADMIN_ADDR: ${OLDBEGGAR_ADMIN_ADDR:-:8088}
+      OLDBEGGAR_ADMIN_USERNAME: ${OLDBEGGAR_ADMIN_USERNAME:-admin}
+      OLDBEGGAR_ADMIN_PASSWORD: ${OLDBEGGAR_ADMIN_PASSWORD:-}
+      OLDBEGGAR_STORAGE_TYPE: ${OLDBEGGAR_STORAGE_TYPE:-json}
+      OLDBEGGAR_MYSQL_DSN: ${OLDBEGGAR_MYSQL_DSN:-}
+      OLDBEGGAR_MYSQL_STATE_TABLE: ${OLDBEGGAR_MYSQL_STATE_TABLE:-oldbeggar_push_state}
+      OLDBEGGAR_MYSQL_EVENT_TABLE: ${OLDBEGGAR_MYSQL_EVENT_TABLE:-oldbeggar_push_events}
+      OLDBEGGAR_STORAGE_AUTO_MIGRATE: ${OLDBEGGAR_STORAGE_AUTO_MIGRATE:-1}
+      OLDBEGGAR_EXPANSION_FILE: ${OLDBEGGAR_EXPANSION_FILE:-/app/state/oldbeggar-expansion.json}
+    ports:
+      - "${OLDBEGGAR_ADMIN_BIND:-127.0.0.1}:${OLDBEGGAR_ADMIN_PORT:-8088}:8088"
     volumes:
       - ./configs/config.local.yaml:/app/configs/config.local.yaml:ro
       - ./configs/qq-groups.json:/app/configs/qq-groups.json:ro
+      - ./configs/wxpusher-topics.generated.json:/app/configs/wxpusher-topics.generated.json:ro
       - ./catalog:/app/catalog:ro
       - ./state:/app/state
     networks:

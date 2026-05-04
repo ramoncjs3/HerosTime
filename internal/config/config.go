@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -31,15 +32,20 @@ func (d *Duration) UnmarshalYAML(node *yaml.Node) error {
 }
 
 type Config struct {
+	mu            sync.RWMutex       `yaml:"-"`
 	Path          string             `yaml:"-"`
 	App           AppConfig          `yaml:"app"`
 	HTTP          HTTPConfig         `yaml:"http"`
+	Admin         AdminConfig        `yaml:"admin"`
+	Storage       StorageConfig      `yaml:"storage"`
+	Expansion     ExpansionConfig    `yaml:"expansion"`
 	Schedules     ScheduleConfig     `yaml:"schedules"`
 	QQ            QQConfig           `yaml:"qq"`
 	WxPusher      WxPusherConfig     `yaml:"wxpusher"`
 	Notifications NotificationConfig `yaml:"notifications"`
 	Catalog       CatalogConfig      `yaml:"catalog"`
 	Variants      []Variant          `yaml:"variants"`
+	expansions    []ExpansionRecord
 }
 
 type AppConfig struct {
@@ -55,6 +61,29 @@ type HTTPConfig struct {
 	Retries     int      `yaml:"retries"`
 	Backoff     Duration `yaml:"backoff"`
 	InsecureTLS bool     `yaml:"insecure_tls"`
+}
+
+type AdminConfig struct {
+	Enabled  bool   `yaml:"enabled"`
+	Addr     string `yaml:"addr"`
+	Username string `yaml:"username"`
+	Password string `yaml:"password"`
+}
+
+type StorageConfig struct {
+	Type        string      `yaml:"type"`
+	MySQL       MySQLConfig `yaml:"mysql"`
+	AutoMigrate *bool       `yaml:"auto_migrate"`
+}
+
+type MySQLConfig struct {
+	DSN        string `yaml:"dsn"`
+	StateTable string `yaml:"state_table"`
+	EventTable string `yaml:"event_table"`
+}
+
+type ExpansionConfig struct {
+	File string `yaml:"file"`
 }
 
 type ScheduleConfig struct {
@@ -144,6 +173,9 @@ func Load(path string) (*Config, error) {
 	cfg.applyDefaults()
 	cfg.resolveRelativePaths()
 	cfg.applyEnvOverrides()
+	if err := cfg.loadExpansionFile(); err != nil {
+		return nil, err
+	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -172,6 +204,22 @@ func (c *Config) applyDefaults() {
 	if c.HTTP.Retries < 0 {
 		c.HTTP.Retries = 0
 	}
+	if c.Admin.Addr == "" {
+		c.Admin.Addr = ":8088"
+	}
+	if c.Admin.Username == "" {
+		c.Admin.Username = "admin"
+	}
+	c.Storage.Type = strings.ToLower(strings.TrimSpace(c.Storage.Type))
+	if c.Storage.Type == "" {
+		c.Storage.Type = "json"
+	}
+	if c.Storage.MySQL.StateTable == "" {
+		c.Storage.MySQL.StateTable = "oldbeggar_push_state"
+	}
+	if c.Storage.MySQL.EventTable == "" {
+		c.Storage.MySQL.EventTable = "oldbeggar_push_events"
+	}
 	if c.Schedules.RefreshSessions == "" {
 		c.Schedules.RefreshSessions = "0 30 7 * * *"
 	}
@@ -180,6 +228,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.QQ.TargetType == "" {
 		c.QQ.TargetType = "group"
+	}
+	if c.QQ.GroupMap == nil {
+		c.QQ.GroupMap = map[string]string{}
 	}
 	if c.WxPusher.Endpoint == "" {
 		c.WxPusher.Endpoint = "https://wxpusher.zjiecode.com/api/send/message"
@@ -260,6 +311,11 @@ func defaultServerListPayload(kind string) string {
 func (c *Config) resolveRelativePaths() {
 	base := filepath.Dir(c.Path)
 	c.App.StateFile = resolvePath(base, c.App.StateFile)
+	if c.Expansion.File == "" {
+		c.Expansion.File = filepath.Join(filepath.Dir(c.App.StateFile), "oldbeggar-expansion.json")
+	} else {
+		c.Expansion.File = resolvePath(base, c.Expansion.File)
+	}
 	c.Catalog.ItemFile = resolvePath(base, c.Catalog.ItemFile)
 	c.Catalog.ItemNameFile = resolvePath(base, c.Catalog.ItemNameFile)
 	c.QQ.GroupMapFile = resolvePath(base, c.QQ.GroupMapFile)
@@ -276,6 +332,37 @@ func resolvePath(base, path string) string {
 func (c *Config) applyEnvOverrides() {
 	if os.Getenv("DRY_RUN") == "1" {
 		c.App.DryRun = true
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_ADMIN_ENABLED")); value != "" {
+		c.Admin.Enabled = isTruthy(value)
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_ADMIN_ADDR")); value != "" {
+		c.Admin.Addr = value
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_ADMIN_USERNAME")); value != "" {
+		c.Admin.Username = value
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_ADMIN_PASSWORD")); value != "" {
+		c.Admin.Password = value
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_STORAGE_TYPE")); value != "" {
+		c.Storage.Type = strings.ToLower(value)
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_MYSQL_DSN")); value != "" {
+		c.Storage.MySQL.DSN = value
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_MYSQL_STATE_TABLE")); value != "" {
+		c.Storage.MySQL.StateTable = value
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_MYSQL_EVENT_TABLE")); value != "" {
+		c.Storage.MySQL.EventTable = value
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_STORAGE_AUTO_MIGRATE")); value != "" {
+		enabled := isTruthy(value)
+		c.Storage.AutoMigrate = &enabled
+	}
+	if value := strings.TrimSpace(os.Getenv("OLDBEGGAR_EXPANSION_FILE")); value != "" {
+		c.Expansion.File = resolvePath(filepath.Dir(c.Path), value)
 	}
 	if c.QQ.APIURL == "" {
 		c.QQ.APIURL = os.Getenv("QQ_BOT_API_URL")
@@ -310,6 +397,32 @@ func (c *Config) Validate() error {
 	if c.Catalog.ItemNameFile == "" {
 		return fmt.Errorf("catalog.item_name_file is required")
 	}
+	if c.Admin.Enabled {
+		if strings.TrimSpace(c.Admin.Addr) == "" {
+			return fmt.Errorf("admin.addr is required when admin is enabled")
+		}
+		if strings.TrimSpace(c.Admin.Username) == "" {
+			return fmt.Errorf("admin.username or OLDBEGGAR_ADMIN_USERNAME is required when admin is enabled")
+		}
+		if strings.TrimSpace(c.Admin.Password) == "" {
+			return fmt.Errorf("admin.password or OLDBEGGAR_ADMIN_PASSWORD is required when admin is enabled")
+		}
+	}
+	switch c.Storage.Type {
+	case "json", "file":
+	case "mysql":
+		if strings.TrimSpace(c.Storage.MySQL.DSN) == "" {
+			return fmt.Errorf("storage.mysql.dsn or OLDBEGGAR_MYSQL_DSN is required when storage.type=mysql")
+		}
+		if !isSafeIdentifier(c.Storage.MySQL.StateTable) {
+			return fmt.Errorf("storage.mysql.state_table contains unsupported characters")
+		}
+		if !isSafeIdentifier(c.Storage.MySQL.EventTable) {
+			return fmt.Errorf("storage.mysql.event_table contains unsupported characters")
+		}
+	default:
+		return fmt.Errorf("unsupported storage.type %q", c.Storage.Type)
+	}
 	if len(c.Variants) == 0 {
 		return fmt.Errorf("at least one variant is required")
 	}
@@ -333,12 +446,18 @@ func (c *Config) Validate() error {
 }
 
 func (c *Config) EnabledVariants() []Variant {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.enabledVariantsLocked()
+}
+
+func (c *Config) enabledVariantsLocked() []Variant {
 	var out []Variant
 	for _, v := range c.Variants {
 		if v.Enabled != nil && !*v.Enabled {
 			continue
 		}
-		out = append(out, v)
+		out = append(out, cloneVariant(v))
 	}
 	return out
 }
@@ -369,4 +488,17 @@ func isTruthy(value string) bool {
 	default:
 		return false
 	}
+}
+
+func isSafeIdentifier(value string) bool {
+	if value == "" {
+		return false
+	}
+	for _, r := range value {
+		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '_' {
+			continue
+		}
+		return false
+	}
+	return true
 }

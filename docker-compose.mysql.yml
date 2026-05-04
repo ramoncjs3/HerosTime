@@ -1,0 +1,39 @@
+services:
+  app:
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mysql:8.4
+    container_name: bzyxt-oldbeggar-refactor-mysql
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Shanghai
+      MYSQL_DATABASE: ${OLDBEGGAR_MYSQL_DATABASE:-oldbeggar}
+      MYSQL_USER: ${OLDBEGGAR_MYSQL_USER:-oldbeggar}
+      MYSQL_PASSWORD: ${OLDBEGGAR_MYSQL_PASSWORD:?set OLDBEGGAR_MYSQL_PASSWORD}
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - refactor_net
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+volumes:
+  mysql_data:
+    name: bzyxt-oldbeggar-refactor-mysql-data

@@ -8,6 +8,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"oldbeggar-refactor/internal/config"
 	"oldbeggar-refactor/internal/httputil"
@@ -16,17 +17,41 @@ import (
 type Client struct {
 	http   *httputil.Client
 	config config.WxPusherConfig
+	mapMu  sync.RWMutex
 }
 
 func NewClient(httpClient *httputil.Client, cfg config.WxPusherConfig) *Client {
 	if cfg.TopicMap == nil {
 		cfg.TopicMap = map[string]int64{}
+	} else {
+		cfg.TopicMap = cloneTopicMap(cfg.TopicMap)
 	}
 	return &Client{http: httpClient, config: cfg}
 }
 
 func (c *Client) Enabled() bool {
 	return c.config.Enabled
+}
+
+func (c *Client) SetTopicID(serverCode string, topicID int64) {
+	if topicID <= 0 || strings.TrimSpace(serverCode) == "" {
+		return
+	}
+	c.mapMu.Lock()
+	defer c.mapMu.Unlock()
+	c.config.TopicMap[strings.TrimSpace(serverCode)] = topicID
+}
+
+func (c *Client) RemoveTopicID(serverCode string, topicID int64) {
+	if topicID <= 0 || strings.TrimSpace(serverCode) == "" {
+		return
+	}
+	c.mapMu.Lock()
+	defer c.mapMu.Unlock()
+	serverCode = strings.TrimSpace(serverCode)
+	if c.config.TopicMap[serverCode] == topicID {
+		delete(c.config.TopicMap, serverCode)
+	}
 }
 
 func (c *Client) Send(ctx context.Context, serverCode, summary, content string) error {
@@ -125,7 +150,10 @@ func (c *Client) topicID(serverCode string) int64 {
 	if id := strings.TrimSpace(os.Getenv("WXPUSHER_TOPIC_ID_" + envServerCode(serverCode))); id != "" {
 		return parseTopicID(id)
 	}
-	if id := c.config.TopicMap[serverCode]; id > 0 {
+	c.mapMu.RLock()
+	id := c.config.TopicMap[serverCode]
+	c.mapMu.RUnlock()
+	if id > 0 {
 		return id
 	}
 	if id := c.topicIDFromFile(serverCode); id > 0 {
@@ -201,4 +229,12 @@ func limitRunes(value string, limit int) string {
 		return value
 	}
 	return string(runes[:limit])
+}
+
+func cloneTopicMap(in map[string]int64) map[string]int64 {
+	out := make(map[string]int64, len(in))
+	for key, value := range in {
+		out[key] = value
+	}
+	return out
 }

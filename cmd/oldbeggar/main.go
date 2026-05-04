@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"oldbeggar-refactor/internal/admin"
 	"oldbeggar-refactor/internal/config"
 	"oldbeggar-refactor/internal/runner"
 )
@@ -29,6 +30,16 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	if cfg.Admin.Enabled {
+		adminServer, err := admin.New(cfg, app)
+		if err != nil {
+			log.Fatalf("init admin: %v", err)
+		}
+		if err := adminServer.Start(ctx); err != nil {
+			log.Fatalf("start admin: %v", err)
+		}
+	}
 
 	switch *mode {
 	case "run":

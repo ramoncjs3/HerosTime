@@ -1,3 +1,12 @@
+FROM node:22-alpine AS web-builder
+
+WORKDIR /src/web/admin
+COPY web/admin/package*.json ./
+RUN npm ci
+
+COPY web/admin ./
+RUN npm run build
+
 FROM golang:1.22-alpine AS builder
 
 WORKDIR /src
@@ -8,6 +17,7 @@ COPY go.mod go.sum* ./
 RUN go mod download
 
 COPY . .
+COPY --from=web-builder /src/internal/admin/web/dist ./internal/admin/web/dist
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o /out/oldbeggar ./cmd/oldbeggar
 
 FROM alpine:3.20

@@ -4,3 +4,5 @@ state/
 catalog/
 *.log
 *.exe
+web/admin/node_modules/
+web/admin/.vite/

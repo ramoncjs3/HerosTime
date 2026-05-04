@@ -11,6 +11,26 @@ http:
   backoff: 2s
   insecure_tls: true
 
+admin:
+  enabled: false
+  addr: ":8088"
+  username: "${OLDBEGGAR_ADMIN_USERNAME}"
+  password: "${OLDBEGGAR_ADMIN_PASSWORD}"
+
+storage:
+  # json keeps the original state/oldbeggar-state.json behavior.
+  # mysql stores current state plus append-only history events.
+  type: json
+  auto_migrate: true
+  mysql:
+    dsn: ${OLDBEGGAR_MYSQL_DSN}
+    state_table: oldbeggar_push_state
+    event_table: oldbeggar_push_events
+
+expansion:
+  # Dynamic servers added from the admin UI are persisted here.
+  file: ../state/oldbeggar-expansion.json
+
 schedules:
   bootstrap_on_start: true
   refresh_sessions: "0 30 7 * * *"
@@ -45,8 +65,8 @@ notifications:
     - 铁剑令
 
 catalog:
-  item_file: catalog/Item.json
-  item_name_file: catalog/ItemToName.json
+  item_file: ../catalog/Item.json
+  item_name_file: ../catalog/ItemToName.json
 
 variants:
   - name: official

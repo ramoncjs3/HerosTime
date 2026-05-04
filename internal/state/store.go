@@ -1,86 +1,97 @@
 package state
 
 import (
-	"encoding/json"
-	"os"
-	"path/filepath"
-	"sync"
+	"fmt"
+	"time"
+
+	"oldbeggar-refactor/internal/config"
 )
 
-type entry struct {
-	Status string   `json:"status"`
-	Items  []string `json:"items,omitempty"`
-}
-
-// Store persists per-day push status keyed by (source:serverCode, date).
 type Store struct {
-	mu       sync.Mutex
-	filePath string
-	data     map[string]map[string]entry // key -> date -> entry
+	backend backend
 }
 
-// Open loads an existing state file or creates a new empty store.
-func Open(filePath string) (*Store, error) {
-	s := &Store{
-		filePath: filePath,
-		data:     make(map[string]map[string]entry),
-	}
-	raw, err := os.ReadFile(filePath)
-	if os.IsNotExist(err) {
-		return s, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	if err := json.Unmarshal(raw, &s.data); err != nil {
-		return nil, err
-	}
-	return s, nil
+type backend interface {
+	Done(serverCode, date string) bool
+	Status(serverCode, date string) (string, bool)
+	Snapshot() map[string]ServerState
+	Events(limit int) []Event
+	Mark(serverCode, date, status string, items []string) error
 }
 
-// Done reports whether any status entry exists for key on date.
-func (s *Store) Done(key, date string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	_, ok := s.data[key][date]
-	return ok
+type ServerState struct {
+	Date      string    `json:"date"`
+	Status    string    `json:"status"`
+	Items     []string  `json:"items,omitempty"`
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
-// Status returns the recorded status for key on date, and whether it exists.
-func (s *Store) Status(key, date string) (string, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	e, ok := s.data[key][date]
-	if !ok {
-		return "", false
-	}
-	return e.Status, true
+type Event struct {
+	ID        int64     `json:"id,omitempty"`
+	Key       string    `json:"key"`
+	Date      string    `json:"date"`
+	Status    string    `json:"status"`
+	Items     []string  `json:"items,omitempty"`
+	CreatedAt time.Time `json:"created_at"`
 }
 
-// Mark records status and items for key on date, then flushes to disk.
-func (s *Store) Mark(key, date, status string, items []string) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	if s.data[key] == nil {
-		s.data[key] = make(map[string]entry)
+func Open(cfg *config.Config) (*Store, error) {
+	switch cfg.Storage.Type {
+	case "mysql":
+		autoMigrate := true
+		if cfg.Storage.AutoMigrate != nil {
+			autoMigrate = *cfg.Storage.AutoMigrate
+		}
+		backend, err := openMySQLStore(cfg.Storage.MySQL, cfg.App.StateFile, autoMigrate)
+		if err != nil {
+			return nil, err
+		}
+		return &Store{backend: backend}, nil
+	case "json", "file", "":
+		backend, err := openFileStore(cfg.App.StateFile)
+		if err != nil {
+			return nil, err
+		}
+		return &Store{backend: backend}, nil
+	default:
+		return nil, fmt.Errorf("unsupported state store %q", cfg.Storage.Type)
 	}
-	s.data[key][date] = entry{Status: status, Items: items}
-	return s.flush()
 }
 
-// flush writes the current state to disk atomically via a temp file.
-func (s *Store) flush() error {
-	raw, err := json.MarshalIndent(s.data, "", "  ")
-	if err != nil {
-		return err
+func (s *Store) Done(serverCode, date string) bool {
+	return s.backend.Done(serverCode, date)
+}
+
+func (s *Store) Status(serverCode, date string) (string, bool) {
+	return s.backend.Status(serverCode, date)
+}
+
+func (s *Store) Snapshot() map[string]ServerState {
+	return s.backend.Snapshot()
+}
+
+func (s *Store) Events(limit int) []Event {
+	return s.backend.Events(limit)
+}
+
+func (s *Store) Mark(serverCode, date, status string, items []string) error {
+	return s.backend.Mark(serverCode, date, status, items)
+}
+
+func isTerminal(status string) bool {
+	switch status {
+	case "notified", "watch_notified", "event_over", "dry_run":
+		return true
+	default:
+		return false
 	}
-	dir := filepath.Dir(s.filePath)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
+}
+
+func splitStateKey(key string) (string, string) {
+	for i, r := range key {
+		if r == ':' {
+			return key[:i], key[i+1:]
+		}
 	}
-	tmp := s.filePath + ".tmp"
-	if err := os.WriteFile(tmp, raw, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, s.filePath)
+	return "oldbeggar", key
 }
