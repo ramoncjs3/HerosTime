@@ -1,84 +1,130 @@
-# oldbeggar-refactor
+# HerosTime 分支说明
 
-这是“老乞丐推送”的 Go 重构版骨架，目标是把官方、苹果、H5、暴走几套重复代码收敛成一个配置驱动的长期运行程序。
+这个仓库的 `main` 分支只作为项目导航页，不再存放具体程序代码。实际程序按分支维护。
 
-## 服务器部署
+## 推荐使用
 
-当前服务器上的新程序部署在：
+优先使用 [`新程序`](https://github.com/ramoncjs3/HerosTime/tree/%E6%96%B0%E7%A8%8B%E5%BA%8F) 分支。
+
+新程序是当前生产使用的 Go 重构版，把官方、苹果、H5、暴走几套老程序合并成一个配置驱动的长期运行服务，并带有管理后台。
+
+## 分支区别
+
+| 分支 | 类型 | 用途 | 特点 | 建议 |
+| --- | --- | --- | --- | --- |
+| `新程序` | 新版统一程序 | 当前生产主线 | 一个程序管理多服种；Vue 管理后台；支持账号密码登录；支持新区扩容；支持 WxPusher；可选 MySQL；默认兼容 JSON 状态文件；Docker 部署 | 后续维护和部署优先用这个 |
+| `官方区服` | 老程序 | 官方服、混服推送 | 单独维护官方/混服逻辑；区服、账号、推送配置写在老配置里 | 只作历史参考，不建议继续扩展 |
+| `苹果区服` | 老程序 | 苹果服推送 | 单独维护苹果服逻辑；和其他服种代码重复较多 | 只作历史参考 |
+| `H5区服` | 老程序 | H5 服推送 | 单独维护 H5 登录和推送逻辑 | 只作历史参考 |
+| `暴走区服` | 老程序 | 暴走服推送 | 单独维护暴走服登录和推送逻辑 | 只作历史参考 |
+
+## 新程序怎么用
+
+拉取新程序分支：
 
 ```bash
-/opt/bzyxt-oldbeggar/refactor
+git clone -b 新程序 https://github.com/ramoncjs3/HerosTime.git
+cd HerosTime
 ```
 
-Docker 运行信息：
-
-- Compose 项目名：`bzyxt-oldbeggar-refactor`
-- 容器：`bzyxt-oldbeggar-refactor-app`
-- 网络：`bzyxt-oldbeggar-refactor-net`
-- 配置文件：`configs/config.local.yaml`
-- 状态目录：`state/`
-
-新程序不再使用 QQBot。生产配置里 `qq.api_url` 和 `qq.access_token` 保持为空，通过 WxPusher 推送。不要把新程序挂到老程序的 `bzyxt-oldbeggar-net`，也不要部署到 `/opt/bzyxt-oldbeggar/deploy`。
-
-部署或重启：
+准备配置：
 
 ```bash
-cd /opt/bzyxt-oldbeggar/refactor
+cp configs/config.example.yaml configs/config.local.yaml
+```
+
+然后编辑：
+
+```text
+configs/config.local.yaml
+```
+
+需要填入：
+
+- 游戏账号密码
+- WxPusher token 和 topic 映射
+- 需要启用的服种和区服
+- 管理后台账号密码
+
+本地测试：
+
+```bash
+go test ./...
+go run ./cmd/oldbeggar -config configs/config.local.yaml -mode run
+```
+
+Docker 部署：
+
+```bash
 docker compose -f docker-compose.server.yml up -d --build app
 ```
 
-检查状态：
+开启管理后台时设置环境变量：
 
 ```bash
-docker compose -f docker-compose.server.yml ps
-docker inspect bzyxt-oldbeggar-refactor-app --format 'networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-docker logs -f --tail=120 bzyxt-oldbeggar-refactor-app
+export OLDBEGGAR_ADMIN_ENABLED=1
+export OLDBEGGAR_ADMIN_USERNAME=admin
+export OLDBEGGAR_ADMIN_PASSWORD='换成强密码'
+docker compose -f docker-compose.server.yml up -d --build app
 ```
 
-## 架构
+默认后台端口是 `8088`。
 
-- `cmd/oldbeggar`: 程序入口，只处理配置、运行模式和退出信号。
-- `internal/auth`: 登录流程，分别对应 `official`/`apple`、`h5`、`baozou`。
-- `internal/game`: 区服列表解析、快速登录、事件状态查询、商店物品查询。
-- `internal/protocol`: 游戏接口需要的 AES、DES、lz-string 压缩和签名。
-- `internal/qq`: NapCat/OneBot HTTP 推送。
-- `internal/wxpusher`: WxPusher topic 推送。
-- `internal/state`: 每日推送状态持久化，避免重启后重复推送。
-- `internal/runner`: 定时任务编排、并发查询和错误收敛。
+## 新区扩容
 
-## 本地运行
+新程序不需要再改代码扩容。
 
-复制示例配置后填入环境变量或直接改成本地私有配置：
+进入管理后台：
 
-```powershell
-Copy-Item configs/config.example.yaml configs/config.local.yaml
-$env:OFFICIAL_USERNAME="你的账号"
-$env:OFFICIAL_PASSWORD="你的密码或旧配置里的 md5:..."
-$env:QQ_BOT_API_URL="http://127.0.0.1:3000"
-$env:QQ_GROUP_ID="QQ群号"
-$env:WXPUSHER_ENABLED="1"
-$env:WXPUSHER_APP_TOKEN="你的 WxPusher appToken"
-$env:WXPUSHER_TOPIC_ID_G1="g1 对应的 topicId"
-go run ./cmd/oldbeggar -config configs/config.local.yaml -mode once
+```text
+区服配置 -> 新区扩容
 ```
 
-运行模式：
+填写：
 
-- `-mode run`: 常驻运行，按 cron 调度。
-- `-mode once`: 启动、预检查、查询一次后退出。
-- `-mode refresh`: 只刷新登录会话。
-- `-mode check`: 使用现有会话查询商店；没有会话时会先刷新。
+- 服种
+- 新区区服号，例如 `h25`、`g4`、`b27`、`h5_16`
+- 独立账号密码，可留空使用服种默认账号
+- WxPusher topicId
 
-## 配置要点
+保存后程序会写入：
 
-`variants` 用 `kind` 区分登录策略，用 `server_rules` 把游戏区服名映射为配置里的区服编号。例如官方服规则把 `官方1` 映射为 `g1`，混服映射为 `h1`，苹果服映射为 `a1`，暴走服映射为 `b1`。
+```text
+state/oldbeggar-expansion.json
+```
 
-每个 `kind` 内置了对应的区服索引地址和 GetServerList payload；只有服务端协议变化时才需要显式配置 `server_index_url` 或 `server_list_payload`。
+并自动触发一次刷新登录，之后定时检查会带上新区。
 
-`notifications.watch_items` 是重点商品列表。命中时推送标题会改成重点商品提醒，内容会同时显示重点商品和全部商品。当前本地配置已加入 `铁剑令`。
+## 老程序分支怎么用
 
-`wxpusher` 用每个区一个 topic 的方式推送。先在 WxPusher 后台创建应用和 topic，把 `app_token` 填成应用 token，再把 `g1`、`h1`、`a1` 这类区服编号映射到对应的 `topicId`。映射可以直接写在 `wxpusher.topic_map`，也可以放到 JSON 文件后配置 `wxpusher.topic_map_file`，格式见 `configs/wxpusher-topics.example.json`。单个区也可以用环境变量覆盖，例如 `WXPUSHER_TOPIC_ID_G1=123456`。
+如果必须查看或运行老程序，切到对应分支：
 
-如果只想用 WxPusher，不再发 QQ，把 `qq.api_url` 留空即可；如果保留 QQ 配置，程序会同时发 QQ 和 WxPusher，两个通道都成功后才记录当天已推送。
+```bash
+git clone -b 官方区服 https://github.com/ramoncjs3/HerosTime.git HerosTime-official
+git clone -b 苹果区服 https://github.com/ramoncjs3/HerosTime.git HerosTime-apple
+git clone -b H5区服 https://github.com/ramoncjs3/HerosTime.git HerosTime-h5
+git clone -b 暴走区服 https://github.com/ramoncjs3/HerosTime.git HerosTime-baozou
+```
 
-示例配置默认开启 `dry_run`，不会真正发 QQ 或 WxPusher。确认查询结果正常后再把 `app.dry_run` 改成 `false`，并把 `wxpusher.enabled` 改成 `true`；或设置环境变量 `DRY_RUN=1` 强制演练模式。
+老程序通常需要编辑：
+
+```text
+app/config/config.yaml
+```
+
+然后按老分支里的 Go 程序入口运行或编译。
+
+老程序分支的问题：
+
+- 每个服种一套代码，重复较多
+- 新区扩容通常要改配置甚至改代码
+- 没有统一管理后台
+- 没有统一任务状态和推送记录页面
+- 配置结构较旧，不适合继续长期扩展
+
+## 后续维护原则
+
+- 新功能统一加到 `新程序` 分支
+- `main` 只维护说明文档
+- 老程序分支只保留历史版本，不再主动扩展
+- 私有配置、账号密码、token、运行状态文件不要提交到仓库

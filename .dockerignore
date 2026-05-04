@@ -1,6 +1,0 @@
-configs/*.local.yaml
-configs/config.server*.yaml
-state/
-catalog/
-*.log
-*.exe
