@@ -44,6 +44,7 @@ type Config struct {
 	WxPusher      WxPusherConfig     `yaml:"wxpusher"`
 	Notifications NotificationConfig `yaml:"notifications"`
 	Catalog       CatalogConfig      `yaml:"catalog"`
+	Captcha       CaptchaConfig      `yaml:"captcha"`
 	Variants      []Variant          `yaml:"variants"`
 	expansions    []ExpansionRecord
 }
@@ -122,6 +123,27 @@ type NotificationConfig struct {
 type CatalogConfig struct {
 	ItemFile     string `yaml:"item_file"`
 	ItemNameFile string `yaml:"item_name_file"`
+}
+
+// CaptchaConfig 控制登录图形验证码的自动识别。
+type CaptchaConfig struct {
+	// Enabled 为 false 时遇到验证码直接报错，不尝试识别。默认开启。
+	Enabled *bool `yaml:"enabled"`
+	// Engine 支持 onnx（本地 ddddocr 模型）与 http（远程识别服务）。
+	Engine string `yaml:"engine"`
+	// ModelFile 为 ddddocr common.onnx 模型路径，相对配置目录解析。
+	ModelFile string `yaml:"model_file"`
+	// Endpoint 为 http 引擎的识别地址。
+	Endpoint string `yaml:"endpoint"`
+	// MaxAttempts 为单次登录允许尝试识别验证码的最大次数。
+	MaxAttempts int `yaml:"max_attempts"`
+	// RateLimitBackoff 为触发“请稍后再试”限流后的等待时间。
+	RateLimitBackoff Duration `yaml:"rate_limit_backoff"`
+}
+
+// IsEnabled 返回验证码识别是否开启（默认开启）。
+func (c CaptchaConfig) IsEnabled() bool {
+	return c.Enabled == nil || *c.Enabled
 }
 
 type Variant struct {
@@ -250,6 +272,18 @@ func (c *Config) applyDefaults() {
 	if c.Notifications.NoticeShopDelay.Duration == 0 {
 		c.Notifications.NoticeShopDelay.Duration = 20 * time.Second
 	}
+	if c.Captcha.Engine == "" {
+		c.Captcha.Engine = "onnx"
+	}
+	if c.Captcha.ModelFile == "" {
+		c.Captcha.ModelFile = "ocr/common.onnx"
+	}
+	if c.Captcha.MaxAttempts <= 0 {
+		c.Captcha.MaxAttempts = 3
+	}
+	if c.Captcha.RateLimitBackoff.Duration == 0 {
+		c.Captcha.RateLimitBackoff.Duration = 30 * time.Second
+	}
 	for i := range c.Variants {
 		v := &c.Variants[i]
 		v.Kind = strings.ToLower(strings.TrimSpace(v.Kind))
@@ -318,6 +352,7 @@ func (c *Config) resolveRelativePaths() {
 	}
 	c.Catalog.ItemFile = resolvePath(base, c.Catalog.ItemFile)
 	c.Catalog.ItemNameFile = resolvePath(base, c.Catalog.ItemNameFile)
+	c.Captcha.ModelFile = resolvePath(base, c.Captcha.ModelFile)
 	c.QQ.GroupMapFile = resolvePath(base, c.QQ.GroupMapFile)
 	c.WxPusher.TopicMapFile = resolvePath(base, c.WxPusher.TopicMapFile)
 }

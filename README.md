@@ -75,6 +75,18 @@ export OLDBEGGAR_EXPANSION_FILE=/app/state/oldbeggar-expansion.json
 
 这个文件只保存后台新增的区服，不改写 `configs/config.local.yaml`。
 
+## 验证码识别
+
+暴走（4399）渠道短时间多次登录会触发图形验证码。程序内置了 OCR 自动识别：登录页出现验证码输入框时，自动拉取验证码图片、识别后连同账号密码重新提交，识别失败会自动刷新重试，最多 `captcha.max_attempts` 次；命中 4399 限流（“请稍后再试”）时等待 `captcha.rate_limit_backoff` 后重试。
+
+配置见 `captcha` 段：
+
+- `engine: onnx`（默认）：用本地 ddddocr `common.onnx` 模型离线识别，纯 Go 推理（vendored gonnx），无 cgo 依赖，不影响 `CGO_ENABLED=0` 的 Docker 构建。
+- `engine: http`：把图片 base64 提交到 `captcha.endpoint`，兼容 ddddocr-server 风格响应。
+- `enabled: false`：关闭识别，遇到验证码直接报错。
+
+模型资产放在 `ocr/common.onnx`（约 54MB，已随仓库分发；Docker 镜像会自动携带到 `/app/ocr`）。路径可用 `captcha.model_file` 覆盖，相对配置目录解析；配置路径不存在时回退到可执行文件目录下的 `ocr/` 同名文件。
+
 ## MySQL 存储
 
 默认仍使用 `state/oldbeggar-state.json`。如果要把推送状态和历史事件写入 MySQL，设置：
@@ -115,6 +127,7 @@ FLUSH PRIVILEGES;
 - `internal/admin`: 管理后台静态资源、登录鉴权、状态接口和手动任务接口。
 - `web/admin`: Vue 3 + Vite 管理后台源码。
 - `internal/auth`: 登录流程，分别对应 `official`/`apple`、`h5`、`baozou`。
+- `internal/captcha`: 登录图形验证码 OCR（onnx/http 双引擎）。
 - `internal/game`: 区服列表解析、快速登录、事件状态查询、商店物品查询。
 - `internal/protocol`: 游戏接口需要的 AES、DES、lz-string 压缩和签名。
 - `internal/qq`: NapCat/OneBot HTTP 推送。

@@ -224,7 +224,7 @@ func (a *App) refreshSessions(ctx context.Context) error {
 	}
 
 	for _, variant := range a.cfg.EnabledVariants() {
-		provider, err := auth.NewProvider(variant.Kind, variant.Auth, a.http)
+		provider, err := auth.NewProvider(variant.Kind, variant.Auth, a.cfg.Captcha, a.http)
 		if err != nil {
 			skip(err)
 			continue
@@ -236,7 +236,8 @@ func (a *App) refreshSessions(ctx context.Context) error {
 		}
 
 		credentialCache := map[string]auth.Credentials{}
-		cacheCredentials := variant.Kind != "h5"
+		credentialErrors := map[string]error{}
+		cacheCredentials := variant.Kind != "h5" && variant.Kind != "mini"
 		for _, rawAccount := range variant.Accounts {
 			accountCfg := variant.AccountFor(rawAccount)
 			account := auth.Account{Username: accountCfg.Username, Password: accountCfg.Password}
@@ -252,12 +253,17 @@ func (a *App) refreshSessions(ctx context.Context) error {
 			var creds auth.Credentials
 			if cacheCredentials {
 				cacheKey := account.Username + "\x00" + account.Password
+				if cachedErr, failed := credentialErrors[cacheKey]; failed {
+					skip(fmt.Errorf("%s %s login: %w", variant.Name, accountCfg.Server, cachedErr))
+					continue
+				}
 				var ok bool
 				creds, ok = credentialCache[cacheKey]
 				if !ok {
 					var err error
 					creds, err = provider.Login(ctx, account)
 					if err != nil {
+						credentialErrors[cacheKey] = err
 						skip(fmt.Errorf("%s %s login: %w", variant.Name, accountCfg.Server, err))
 						continue
 					}
@@ -281,7 +287,7 @@ func (a *App) refreshSessions(ctx context.Context) error {
 				GameURL:       endpoint.GameURL,
 			}
 			err = a.quickLoginWithRetry(ctx, session)
-			if variant.Kind == "h5" && errors.Is(err, game.ErrEmptyQuickLogin) {
+			if (variant.Kind == "h5" || variant.Kind == "mini") && errors.Is(err, game.ErrEmptyQuickLogin) {
 				err = a.quickLoginWithCredentialRefresh(ctx, provider, account, session)
 			}
 			if err != nil {

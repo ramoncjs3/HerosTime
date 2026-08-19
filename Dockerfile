@@ -25,5 +25,7 @@ FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /out/oldbeggar /app/oldbeggar
+# ddddocr common.onnx 验证码识别模型（见 README “验证码识别”）。
+COPY --from=builder /src/ocr /app/ocr
 
 ENTRYPOINT ["/app/oldbeggar"]

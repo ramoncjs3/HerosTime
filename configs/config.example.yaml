@@ -68,6 +68,19 @@ catalog:
   item_file: ../catalog/Item.json
   item_name_file: ../catalog/ItemToName.json
 
+captcha:
+  # 登录遇到图形验证码时自动 OCR 识别，仅 baozou（4399）渠道会用到。
+  enabled: true
+  # onnx：本地 ddddocr common.onnx 模型（纯 Go 推理，无 cgo）；http：远程识别服务。
+  engine: onnx
+  model_file: ../ocr/common.onnx
+  # engine: http 时填写，兼容 ddddocr-server 风格响应。
+  endpoint: ""
+  # 单次登录最多尝试识别验证码的次数。
+  max_attempts: 3
+  # 触发“请稍后再试”限流后的等待时间。
+  rate_limit_backoff: 30s
+
 variants:
   - name: official
     kind: official

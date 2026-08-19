@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"strings"
 	"time"
@@ -40,6 +41,27 @@ func New(cfg config.HTTPConfig) *Client {
 		retries: cfg.Retries,
 		backoff: cfg.Backoff.Duration,
 	}
+}
+
+// NewSession returns an isolated client that shares the transport and retry
+// policy but keeps its own cookies. It is intended for short authentication
+// flows whose redirects and form submissions must use the same browser
+// session.
+func (c *Client) NewSession() (*Client, error) {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("create cookie jar: %w", err)
+	}
+	return &Client{
+		httpClient: &http.Client{
+			Timeout:       c.httpClient.Timeout,
+			Transport:     c.httpClient.Transport,
+			CheckRedirect: c.httpClient.CheckRedirect,
+			Jar:           jar,
+		},
+		retries: c.retries,
+		backoff: c.backoff,
+	}, nil
 }
 
 func (c *Client) Get(ctx context.Context, rawURL string) (*Response, error) {
