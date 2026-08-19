@@ -14,6 +14,7 @@ ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=sum.golang.google.cn
 
 COPY go.mod go.sum* ./
+COPY third_party/gonnx/go.mod third_party/gonnx/go.sum* ./third_party/gonnx/
 RUN go mod download
 
 COPY . .
