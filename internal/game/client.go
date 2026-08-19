@@ -159,7 +159,7 @@ func quickLoginPayload(session *Session) (string, error) {
 			session.Credentials.Token,
 			nonce,
 		), nil
-	case "h5":
+	case "h5", "mini":
 		return fmt.Sprintf(`{"mod":"User","do":"quicklogin","p":{"account":"%s","pwd":"123456","checkObj":{"userId":"%s","userName":"%s","time":"%d","sign":"%s","gameId":"100053785"},"channel":"4399","flag":1,"macAdress":"","platform":5,"web":true,"clientVersion":{"android":"2.3.5.1629810643786"},"NeedUpdateVersion":"","inGameTime":0,"roleID":0,"userAccount":"%s","loginFlag":"0","nonce":"%s"}}`,
 			session.Credentials.LoginID,
 			session.Credentials.LoginID,
