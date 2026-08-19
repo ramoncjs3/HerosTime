@@ -1,8 +1,11 @@
+//go:build captcha_probe
+
 package auth
 
 // 探测用测试：实际走一遍 baozou 自动登录流程（到账号密码表单为止），
 // 把各阶段页面落盘，用于确认验证码在页面中的字段名与图片地址。
-// 运行方式：OLDBEGGAR_PROBE_CAPTCHA=1 go test ./internal/auth -run TestBaozouCaptchaProbe -v
+// 包含并发与快速连续登录，会触发 4399 风控，绝不进入普通测试集：
+// 运行方式：OLDBEGGAR_PROBE_CAPTCHA=1 go test -tags captcha_probe ./internal/auth -run TestBaozouCaptchaProbe -v
 
 import (
 	"context"

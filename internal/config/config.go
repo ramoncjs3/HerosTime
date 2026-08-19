@@ -127,7 +127,8 @@ type CatalogConfig struct {
 
 // CaptchaConfig 控制登录图形验证码的自动识别。
 type CaptchaConfig struct {
-	// Enabled 为 false 时遇到验证码直接报错，不尝试识别。默认开启。
+	// Enabled 显式设置为 true 时才启用验证码识别；默认关闭，
+	// 避免旧配置升级后意外改变生产行为。
 	Enabled *bool `yaml:"enabled"`
 	// Engine 支持 onnx（本地 ddddocr 模型）与 http（远程识别服务）。
 	Engine string `yaml:"engine"`
@@ -139,11 +140,13 @@ type CaptchaConfig struct {
 	MaxAttempts int `yaml:"max_attempts"`
 	// RateLimitBackoff 为触发“请稍后再试”限流后的等待时间。
 	RateLimitBackoff Duration `yaml:"rate_limit_backoff"`
+	// RateLimitCooldown 为触发限流后账号的冷却时间，冷却内不再尝试登录。
+	RateLimitCooldown Duration `yaml:"rate_limit_cooldown"`
 }
 
-// IsEnabled 返回验证码识别是否开启（默认开启）。
+// IsEnabled 返回验证码识别是否开启（默认关闭，需显式 enabled: true）。
 func (c CaptchaConfig) IsEnabled() bool {
-	return c.Enabled == nil || *c.Enabled
+	return c.Enabled != nil && *c.Enabled
 }
 
 type Variant struct {
@@ -283,6 +286,9 @@ func (c *Config) applyDefaults() {
 	}
 	if c.Captcha.RateLimitBackoff.Duration == 0 {
 		c.Captcha.RateLimitBackoff.Duration = 30 * time.Second
+	}
+	if c.Captcha.RateLimitCooldown.Duration == 0 {
+		c.Captcha.RateLimitCooldown.Duration = 5 * time.Minute
 	}
 	for i := range c.Variants {
 		v := &c.Variants[i]

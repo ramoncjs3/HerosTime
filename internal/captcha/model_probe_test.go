@@ -98,7 +98,8 @@ func TestCaptchaModelRunProbe(t *testing.T) {
 
 // TestCaptchaInferProbe 端到端推理一张合成图片，验证全流程算子正确运行。
 func TestCaptchaInferProbe(t *testing.T) {
-	rec, err := New(config.CaptchaConfig{Engine: "onnx", ModelFile: modelPath(t)}, nil)
+	enabled := true
+	rec, err := New(config.CaptchaConfig{Enabled: &enabled, Engine: "onnx", ModelFile: modelPath(t)}, nil)
 	if err != nil {
 		t.Fatalf("new recognizer: %v", err)
 	}

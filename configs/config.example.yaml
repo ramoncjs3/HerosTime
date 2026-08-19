@@ -70,6 +70,7 @@ catalog:
 
 captcha:
   # 登录遇到图形验证码时自动 OCR 识别，仅 baozou（4399）渠道会用到。
+  # 默认关闭；需要时显式开启。
   enabled: true
   # onnx：本地 ddddocr common.onnx 模型（纯 Go 推理，无 cgo）；http：远程识别服务。
   engine: onnx
@@ -80,6 +81,8 @@ captcha:
   max_attempts: 3
   # 触发“请稍后再试”限流后的等待时间。
   rate_limit_backoff: 30s
+  # 触发限流后账号的冷却时间，冷却内不再尝试登录，避免跨刷新周期撞风控。
+  rate_limit_cooldown: 5m
 
 variants:
   - name: official

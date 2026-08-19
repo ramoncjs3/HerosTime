@@ -95,7 +95,8 @@ func renderCaptchaText(t *testing.T, text string) []byte {
 // TestOnnxRecognizerRenderedText 用本地模型识别渲染出的文字图片。
 // 模型文件缺失时跳过（资产分发方式见 README “验证码识别”）。
 func TestOnnxRecognizerRenderedText(t *testing.T) {
-	rec, err := New(config.CaptchaConfig{Engine: "onnx", ModelFile: modelPath(t)}, nil)
+	enabled := true
+	rec, err := New(config.CaptchaConfig{Enabled: &enabled, Engine: "onnx", ModelFile: modelPath(t)}, nil)
 	if err != nil {
 		t.Fatalf("new recognizer: %v", err)
 	}

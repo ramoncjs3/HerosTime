@@ -77,13 +77,15 @@ export OLDBEGGAR_EXPANSION_FILE=/app/state/oldbeggar-expansion.json
 
 ## 验证码识别
 
-暴走（4399）渠道短时间多次登录会触发图形验证码。程序内置了 OCR 自动识别：登录页出现验证码输入框时，自动拉取验证码图片、识别后连同账号密码重新提交，识别失败会自动刷新重试，最多 `captcha.max_attempts` 次；命中 4399 限流（“请稍后再试”）时等待 `captcha.rate_limit_backoff` 后重试。
+暴走（4399）渠道短时间多次登录会触发图形验证码。程序内置了 OCR 自动识别：登录页出现验证码输入框时，自动拉取验证码图片、识别后连同账号密码重新提交，识别失败会自动刷新重试，最多 `captcha.max_attempts` 次；命中 4399 限流（“请稍后再试”）时等待 `captcha.rate_limit_backoff` 后重试，并为账号记录 `captcha.rate_limit_cooldown` 冷却，冷却内不再尝试登录。非验证码导致的登录失败（如密码错误）不会重试。
+
+验证码识别默认关闭，需要在配置里显式开启（旧配置升级不会改变生产行为）：
 
 配置见 `captcha` 段：
 
 - `engine: onnx`（默认）：用本地 ddddocr `common.onnx` 模型离线识别，纯 Go 推理（vendored gonnx），无 cgo 依赖，不影响 `CGO_ENABLED=0` 的 Docker 构建。
 - `engine: http`：把图片 base64 提交到 `captcha.endpoint`，兼容 ddddocr-server 风格响应。
-- `enabled: false`：关闭识别，遇到验证码直接报错。
+- 不配置或 `enabled: false`：遇到验证码直接报错。
 
 模型资产放在 `ocr/common.onnx`（约 54MB，已随仓库分发；Docker 镜像会自动携带到 `/app/ocr`）。路径可用 `captcha.model_file` 覆盖，相对配置目录解析；配置路径不存在时回退到可执行文件目录下的 `ocr/` 同名文件。
 

@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Luzifer/go-openssl/v4"
@@ -27,6 +28,9 @@ type BaozouProvider struct {
 	cfg        config.AuthConfig
 	captchaCfg config.CaptchaConfig
 	captchaRec captcha.Recognizer
+
+	cooldownMu    sync.Mutex
+	cooldownUntil map[string]time.Time
 }
 
 const (
@@ -59,6 +63,9 @@ type loginForm struct {
 func (p *BaozouProvider) Login(ctx context.Context, account Account) (Credentials, error) {
 	if account.Username == "" || account.Password == "" {
 		return Credentials{}, fmt.Errorf("baozou username and password are required")
+	}
+	if until, ok := p.cooldownFor(account.Username); ok {
+		return Credentials{}, fmt.Errorf("baozou account %s is in rate-limit cooldown until %s, skipping login", account.Username, until.Format("15:04:05"))
 	}
 
 	session, err := p.http.NewSession()
@@ -186,8 +193,9 @@ func (p *BaozouProvider) authorize(ctx context.Context, session *httputil.Client
 		}
 		if isRateLimited(resp) {
 			rateLimited++
-			if rateLimited > maxAttempts {
-				return "", "", fmt.Errorf("baozou login rate limited repeatedly (%s)", strings.TrimSpace(string(resp.Body)))
+			until := p.markRateLimited(account.Username)
+			if rateLimited >= maxAttempts {
+				return "", "", fmt.Errorf("baozou login rate limited repeatedly, account cooled down until %s (%s)", until.Format("15:04:05"), strings.TrimSpace(string(resp.Body)))
 			}
 			backoff := p.captchaCfg.RateLimitBackoff.Duration
 			if backoff <= 0 {
@@ -207,10 +215,15 @@ func (p *BaozouProvider) authorize(ctx context.Context, session *httputil.Client
 		}
 		attempts++
 		if formPattern.Match(resp.Body) {
-			// 服务端返回新的登录页（可能带验证码），换一张验证码重试。
+			if !pageRequiresCaptcha(resp.Body) {
+				// 非验证码导致的登录失败（如密码错误），重试没有意义，直接报错。
+				return "", "", fmt.Errorf("baozou account login failed: %s", summarizeLoginHTML(resp.Body))
+			}
+			// 验证码识别错误等服务端返回新验证码页的情况，换一张验证码重试。
 			if attempts >= maxAttempts {
 				return "", "", fmt.Errorf("baozou login failed after %d captcha attempts: %s", maxAttempts, summarizeLoginHTML(resp.Body))
 			}
+			log.Printf("baozou captcha attempt %d/%d failed, refreshing captcha", attempts, maxAttempts)
 			page = resp.Body
 			pageURL = loginActionURL
 			continue
@@ -261,6 +274,32 @@ func parseAuthorizeResult(body []byte) (string, string, bool) {
 		return "", "", false
 	}
 	return result.Result.State, uid, true
+}
+
+// markRateLimited 记录账号限流冷却，避免跨刷新周期继续撞风控。
+func (p *BaozouProvider) markRateLimited(username string) time.Time {
+	cooldown := p.captchaCfg.RateLimitCooldown.Duration
+	if cooldown <= 0 {
+		cooldown = 5 * time.Minute
+	}
+	until := time.Now().Add(cooldown)
+	p.cooldownMu.Lock()
+	defer p.cooldownMu.Unlock()
+	if p.cooldownUntil == nil {
+		p.cooldownUntil = map[string]time.Time{}
+	}
+	p.cooldownUntil[username] = until
+	return until
+}
+
+func (p *BaozouProvider) cooldownFor(username string) (time.Time, bool) {
+	p.cooldownMu.Lock()
+	defer p.cooldownMu.Unlock()
+	until, ok := p.cooldownUntil[username]
+	if !ok || time.Now().After(until) {
+		return time.Time{}, false
+	}
+	return until, true
 }
 
 // isRateLimited 识别 4399 风控限流响应（HTTP 202 + “请稍后再试~”纯文本）。

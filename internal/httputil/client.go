@@ -97,7 +97,7 @@ func (c *Client) Do(ctx context.Context, method, rawURL, contentType string, bod
 		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			lastErr = err
-			if !c.shouldRetry(ctx, attempt, attempts, 0) {
+			if !c.shouldRetry(ctx, method, attempt, attempts, 0) {
 				break
 			}
 			continue
@@ -114,7 +114,7 @@ func (c *Client) Do(ctx context.Context, method, rawURL, contentType string, bod
 
 		if readErr != nil {
 			lastErr = readErr
-			if !c.shouldRetry(ctx, attempt, attempts, resp.StatusCode) {
+			if !c.shouldRetry(ctx, method, attempt, attempts, resp.StatusCode) {
 				break
 			}
 			continue
@@ -123,7 +123,7 @@ func (c *Client) Do(ctx context.Context, method, rawURL, contentType string, bod
 			return result, nil
 		}
 		lastErr = fmt.Errorf("%s %s returned status %d: %s", method, rawURL, resp.StatusCode, trimBody(respBody))
-		if !c.shouldRetry(ctx, attempt, attempts, resp.StatusCode) {
+		if !c.shouldRetry(ctx, method, attempt, attempts, resp.StatusCode) {
 			return result, lastErr
 		}
 	}
@@ -134,8 +134,13 @@ func (c *Client) Do(ctx context.Context, method, rawURL, contentType string, bod
 	return nil, lastErr
 }
 
-func (c *Client) shouldRetry(ctx context.Context, attempt, attempts, status int) bool {
+func (c *Client) shouldRetry(ctx context.Context, method string, attempt, attempts, status int) bool {
 	if attempt >= attempts {
+		return false
+	}
+	// POST 等非幂等请求不自动重试，避免登录/提交类请求被重复发送，
+	// 绕过上层“一轮一次”的限制。
+	if method != http.MethodGet && method != http.MethodHead {
 		return false
 	}
 	if status != 0 && status != http.StatusTooManyRequests && status < 500 {
