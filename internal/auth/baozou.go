@@ -29,8 +29,24 @@ type BaozouProvider struct {
 	captchaCfg config.CaptchaConfig
 	captchaRec captcha.Recognizer
 
-	cooldownMu    sync.Mutex
-	cooldownUntil map[string]time.Time
+	cooldownInit sync.Once
+	cooldowns    *BaozouCooldowns
+}
+
+// BaozouCooldowns stores account cooldowns independently of a provider
+// instance. Runner keeps one store for the lifetime of the app so a new
+// provider created by a later refresh still observes an earlier rate limit.
+type BaozouCooldowns struct {
+	mu    sync.Mutex
+	until map[string]time.Time
+	now   func() time.Time
+}
+
+func NewBaozouCooldowns() *BaozouCooldowns {
+	return &BaozouCooldowns{
+		until: make(map[string]time.Time),
+		now:   time.Now,
+	}
 }
 
 const (
@@ -156,7 +172,6 @@ func (p *BaozouProvider) authorize(ctx context.Context, session *httputil.Client
 		maxAttempts = 3
 	}
 	attempts := 0
-	rateLimited := 0
 	for {
 		form, err := parseLoginForm(page, "authorizeForm")
 		if err != nil {
@@ -192,26 +207,8 @@ func (p *BaozouProvider) authorize(ctx context.Context, session *httputil.Client
 			return state, uid, nil
 		}
 		if isRateLimited(resp) {
-			rateLimited++
 			until := p.markRateLimited(account.Username)
-			if rateLimited >= maxAttempts {
-				return "", "", fmt.Errorf("baozou login rate limited repeatedly, account cooled down until %s (%s)", until.Format("15:04:05"), strings.TrimSpace(string(resp.Body)))
-			}
-			backoff := p.captchaCfg.RateLimitBackoff.Duration
-			if backoff <= 0 {
-				backoff = 30 * time.Second
-			}
-			log.Printf("baozou login rate limited, waiting %s before retry %d/%d", backoff, rateLimited, maxAttempts)
-			select {
-			case <-ctx.Done():
-				return "", "", ctx.Err()
-			case <-time.After(backoff):
-			}
-			page, pageURL, err = p.openAccountPage(ctx, session, loginURL)
-			if err != nil {
-				return "", "", err
-			}
-			continue
+			return "", "", fmt.Errorf("baozou login rate limited, account cooled down until %s (%s)", until.Format("15:04:05"), strings.TrimSpace(string(resp.Body)))
 		}
 		attempts++
 		if formPattern.Match(resp.Body) {
@@ -282,24 +279,53 @@ func (p *BaozouProvider) markRateLimited(username string) time.Time {
 	if cooldown <= 0 {
 		cooldown = 5 * time.Minute
 	}
-	until := time.Now().Add(cooldown)
-	p.cooldownMu.Lock()
-	defer p.cooldownMu.Unlock()
-	if p.cooldownUntil == nil {
-		p.cooldownUntil = map[string]time.Time{}
-	}
-	p.cooldownUntil[username] = until
-	return until
+	return p.cooldownStore().mark(username, cooldown)
 }
 
 func (p *BaozouProvider) cooldownFor(username string) (time.Time, bool) {
-	p.cooldownMu.Lock()
-	defer p.cooldownMu.Unlock()
-	until, ok := p.cooldownUntil[username]
-	if !ok || time.Now().After(until) {
+	return p.cooldownStore().active(username)
+}
+
+func (p *BaozouProvider) cooldownStore() *BaozouCooldowns {
+	p.cooldownInit.Do(func() {
+		if p.cooldowns == nil {
+			p.cooldowns = NewBaozouCooldowns()
+		}
+	})
+	return p.cooldowns
+}
+
+func (c *BaozouCooldowns) mark(username string, duration time.Duration) time.Time {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	now := c.currentTime()
+	until := now.Add(duration)
+	if c.until == nil {
+		c.until = make(map[string]time.Time)
+	}
+	c.until[username] = until
+	return until
+}
+
+func (c *BaozouCooldowns) active(username string) (time.Time, bool) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	until, ok := c.until[username]
+	if !ok {
+		return time.Time{}, false
+	}
+	if !c.currentTime().Before(until) {
+		delete(c.until, username)
 		return time.Time{}, false
 	}
 	return until, true
+}
+
+func (c *BaozouCooldowns) currentTime() time.Time {
+	if c.now != nil {
+		return c.now()
+	}
+	return time.Now()
 }
 
 // isRateLimited 识别 4399 风控限流响应（HTTP 202 + “请稍后再试~”纯文本）。

@@ -25,18 +25,27 @@ type Provider interface {
 	Login(ctx context.Context, account Account) (Credentials, error)
 }
 
-func NewProvider(kind string, cfg config.AuthConfig, captchaCfg config.CaptchaConfig, httpClient *httputil.Client) (Provider, error) {
+func NewProvider(kind string, cfg config.AuthConfig, captchaCfg config.CaptchaConfig, httpClient *httputil.Client, baozouCooldowns *BaozouCooldowns) (Provider, error) {
 	switch kind {
 	case "official", "apple":
 		return &OfficialProvider{http: httpClient}, nil
-	case "h5":
+	case "h5", "mini":
 		return &H5Provider{http: httpClient, cfg: cfg}, nil
 	case "baozou":
 		recognizer, err := captcha.New(captchaCfg, httpClient)
 		if err != nil {
 			return nil, err
 		}
-		return &BaozouProvider{http: httpClient, cfg: cfg, captchaCfg: captchaCfg, captchaRec: recognizer}, nil
+		if baozouCooldowns == nil {
+			baozouCooldowns = NewBaozouCooldowns()
+		}
+		return &BaozouProvider{
+			http:       httpClient,
+			cfg:        cfg,
+			captchaCfg: captchaCfg,
+			captchaRec: recognizer,
+			cooldowns:  baozouCooldowns,
+		}, nil
 	default:
 		return nil, fmt.Errorf("unsupported auth kind %q", kind)
 	}

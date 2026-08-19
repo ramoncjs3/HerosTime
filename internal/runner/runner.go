@@ -25,12 +25,13 @@ type App struct {
 	cfg      *config.Config
 	location *time.Location
 
-	resolver *game.ServerResolver
-	game     *game.Client
-	qq       *qq.Client
-	wxpusher *wxpusher.Client
-	state    *state.Store
-	http     *httputil.Client
+	resolver        *game.ServerResolver
+	game            *game.Client
+	qq              *qq.Client
+	wxpusher        *wxpusher.Client
+	state           *state.Store
+	http            *httputil.Client
+	baozouCooldowns *auth.BaozouCooldowns
 
 	jobMu      sync.Mutex
 	sessionsMu sync.RWMutex
@@ -76,14 +77,15 @@ func New(cfg *config.Config) (*App, error) {
 		return nil, err
 	}
 	return &App{
-		cfg:      cfg,
-		location: location,
-		resolver: game.NewServerResolver(httpClient),
-		game:     game.NewClient(httpClient, itemCatalog),
-		qq:       qq.NewClient(httpClient, cfg.QQ),
-		wxpusher: wxpusher.NewClient(httpClient, cfg.WxPusher),
-		state:    stateStore,
-		http:     httpClient,
+		cfg:             cfg,
+		location:        location,
+		resolver:        game.NewServerResolver(httpClient),
+		game:            game.NewClient(httpClient, itemCatalog),
+		qq:              qq.NewClient(httpClient, cfg.QQ),
+		wxpusher:        wxpusher.NewClient(httpClient, cfg.WxPusher),
+		state:           stateStore,
+		http:            httpClient,
+		baozouCooldowns: auth.NewBaozouCooldowns(),
 	}, nil
 }
 
@@ -224,7 +226,7 @@ func (a *App) refreshSessions(ctx context.Context) error {
 	}
 
 	for _, variant := range a.cfg.EnabledVariants() {
-		provider, err := auth.NewProvider(variant.Kind, variant.Auth, a.cfg.Captcha, a.http)
+		provider, err := auth.NewProvider(variant.Kind, variant.Auth, a.cfg.Captcha, a.http, a.baozouCooldowns)
 		if err != nil {
 			skip(err)
 			continue

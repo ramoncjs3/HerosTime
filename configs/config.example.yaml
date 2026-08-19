@@ -79,9 +79,7 @@ captcha:
   endpoint: ""
   # 单次登录最多尝试识别验证码的次数。
   max_attempts: 3
-  # 触发“请稍后再试”限流后的等待时间。
-  rate_limit_backoff: 30s
-  # 触发限流后账号的冷却时间，冷却内不再尝试登录，避免跨刷新周期撞风控。
+  # 首次触发限流后立即结束本轮；冷却内后续刷新不再尝试登录。
   rate_limit_cooldown: 5m
 
 variants:

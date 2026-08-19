@@ -138,8 +138,6 @@ type CaptchaConfig struct {
 	Endpoint string `yaml:"endpoint"`
 	// MaxAttempts 为单次登录允许尝试识别验证码的最大次数。
 	MaxAttempts int `yaml:"max_attempts"`
-	// RateLimitBackoff 为触发“请稍后再试”限流后的等待时间。
-	RateLimitBackoff Duration `yaml:"rate_limit_backoff"`
 	// RateLimitCooldown 为触发限流后账号的冷却时间，冷却内不再尝试登录。
 	RateLimitCooldown Duration `yaml:"rate_limit_cooldown"`
 }
@@ -284,9 +282,6 @@ func (c *Config) applyDefaults() {
 	if c.Captcha.MaxAttempts <= 0 {
 		c.Captcha.MaxAttempts = 3
 	}
-	if c.Captcha.RateLimitBackoff.Duration == 0 {
-		c.Captcha.RateLimitBackoff.Duration = 30 * time.Second
-	}
 	if c.Captcha.RateLimitCooldown.Duration == 0 {
 		c.Captcha.RateLimitCooldown.Duration = 5 * time.Minute
 	}
@@ -328,7 +323,7 @@ func (c *Config) applyDefaults() {
 
 func defaultServerIndexURL(kind string) string {
 	switch kind {
-	case "h5":
+	case "h5", "mini":
 		return "https://bz.maple-game.com/h5.json"
 	default:
 		return "http://bz.maple-game.com/bz.json"
@@ -337,7 +332,7 @@ func defaultServerIndexURL(kind string) string {
 
 func defaultServerListPayload(kind string) string {
 	switch kind {
-	case "h5":
+	case "h5", "mini":
 		return "a515314766c66a0146918898435cb2c08938a1cf3899c350cd905566983202334bea7b42c11ddb6b32cf21a1e61ec92ce74011509d3e126e12091d5f8590ce8c9d9e475c6ad6a014e3e04da25a2e82049f8c6378ecdac4950025843ee7a5dfd0"
 	case "baozou":
 		return "a515314766c66a0146918898435cb2c08938a1cf3899c350cd905566983202334bea7b42c11ddb6b32cf21a1e61ec92ce74011509d3e126e12091d5f8590ce8ca721bb5d3b728cab1275abe305e5abbe0fd05533e1ca6610ad638f4ae08c5551"
@@ -472,7 +467,7 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("variant %q kind is required", v.Name)
 		}
 		switch v.Kind {
-		case "official", "h5", "baozou", "apple":
+		case "official", "h5", "mini", "baozou", "apple":
 		default:
 			return fmt.Errorf("variant %q has unsupported kind %q", v.Name, v.Kind)
 		}

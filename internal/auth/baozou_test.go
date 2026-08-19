@@ -3,6 +3,9 @@ package auth
 import (
 	"net/url"
 	"testing"
+	"time"
+
+	"oldbeggar-refactor/internal/config"
 )
 
 func TestParseLoginForm(t *testing.T) {
@@ -57,5 +60,32 @@ func TestResolveBaozouLoginActionRejectsUnexpectedHost(t *testing.T) {
 
 	if _, err := resolveBaozouLoginAction(base, "https://example.com/login"); err == nil {
 		t.Fatal("resolveBaozouLoginAction() accepted unexpected host")
+	}
+}
+
+func TestBaozouCooldownSharedAcrossProviders(t *testing.T) {
+	now := time.Date(2026, 8, 19, 21, 0, 0, 0, time.UTC)
+	cooldowns := NewBaozouCooldowns()
+	cooldowns.now = func() time.Time { return now }
+
+	first := &BaozouProvider{
+		captchaCfg: config.CaptchaConfig{
+			RateLimitCooldown: config.Duration{Duration: 5 * time.Minute},
+		},
+		cooldowns: cooldowns,
+	}
+	second := &BaozouProvider{cooldowns: cooldowns}
+
+	wantUntil := now.Add(5 * time.Minute)
+	if got := first.markRateLimited("shared-account"); !got.Equal(wantUntil) {
+		t.Fatalf("cooldown until = %s, want %s", got, wantUntil)
+	}
+	if got, ok := second.cooldownFor("shared-account"); !ok || !got.Equal(wantUntil) {
+		t.Fatalf("second provider cooldown = %s, %v; want %s, true", got, ok, wantUntil)
+	}
+
+	now = wantUntil
+	if got, ok := second.cooldownFor("shared-account"); ok {
+		t.Fatalf("expired cooldown still active at %s", got)
 	}
 }
