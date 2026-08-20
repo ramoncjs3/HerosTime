@@ -44,6 +44,7 @@ type Config struct {
 	WxPusher      WxPusherConfig     `yaml:"wxpusher"`
 	Notifications NotificationConfig `yaml:"notifications"`
 	Catalog       CatalogConfig      `yaml:"catalog"`
+	Captcha       CaptchaConfig      `yaml:"captcha"`
 	Variants      []Variant          `yaml:"variants"`
 	expansions    []ExpansionRecord
 }
@@ -122,6 +123,28 @@ type NotificationConfig struct {
 type CatalogConfig struct {
 	ItemFile     string `yaml:"item_file"`
 	ItemNameFile string `yaml:"item_name_file"`
+}
+
+// CaptchaConfig 控制登录图形验证码的自动识别。
+type CaptchaConfig struct {
+	// Enabled 显式设置为 true 时才启用验证码识别；默认关闭，
+	// 避免旧配置升级后意外改变生产行为。
+	Enabled *bool `yaml:"enabled"`
+	// Engine 支持 onnx（本地 ddddocr 模型）与 http（远程识别服务）。
+	Engine string `yaml:"engine"`
+	// ModelFile 为 ddddocr common.onnx 模型路径，相对配置目录解析。
+	ModelFile string `yaml:"model_file"`
+	// Endpoint 为 http 引擎的识别地址。
+	Endpoint string `yaml:"endpoint"`
+	// MaxAttempts 为单次登录允许尝试识别验证码的最大次数。
+	MaxAttempts int `yaml:"max_attempts"`
+	// RateLimitCooldown 为触发限流后账号的冷却时间，冷却内不再尝试登录。
+	RateLimitCooldown Duration `yaml:"rate_limit_cooldown"`
+}
+
+// IsEnabled 返回验证码识别是否开启（默认关闭，需显式 enabled: true）。
+func (c CaptchaConfig) IsEnabled() bool {
+	return c.Enabled != nil && *c.Enabled
 }
 
 type Variant struct {
@@ -250,6 +273,18 @@ func (c *Config) applyDefaults() {
 	if c.Notifications.NoticeShopDelay.Duration == 0 {
 		c.Notifications.NoticeShopDelay.Duration = 20 * time.Second
 	}
+	if c.Captcha.Engine == "" {
+		c.Captcha.Engine = "onnx"
+	}
+	if c.Captcha.ModelFile == "" {
+		c.Captcha.ModelFile = "ocr/common.onnx"
+	}
+	if c.Captcha.MaxAttempts <= 0 {
+		c.Captcha.MaxAttempts = 3
+	}
+	if c.Captcha.RateLimitCooldown.Duration == 0 {
+		c.Captcha.RateLimitCooldown.Duration = 5 * time.Minute
+	}
 	for i := range c.Variants {
 		v := &c.Variants[i]
 		v.Kind = strings.ToLower(strings.TrimSpace(v.Kind))
@@ -288,7 +323,7 @@ func (c *Config) applyDefaults() {
 
 func defaultServerIndexURL(kind string) string {
 	switch kind {
-	case "h5":
+	case "h5", "mini":
 		return "https://bz.maple-game.com/h5.json"
 	default:
 		return "http://bz.maple-game.com/bz.json"
@@ -299,6 +334,8 @@ func defaultServerListPayload(kind string) string {
 	switch kind {
 	case "h5":
 		return "a515314766c66a0146918898435cb2c08938a1cf3899c350cd905566983202334bea7b42c11ddb6b32cf21a1e61ec92ce74011509d3e126e12091d5f8590ce8c9d9e475c6ad6a014e3e04da25a2e82049f8c6378ecdac4950025843ee7a5dfd0"
+	case "mini":
+		return "a515314766c66a0146918898435cb2c08938a1cf3899c350cd905566983202334bea7b42c11ddb6b32cf21a1e61ec92ce74011509d3e126e12091d5f8590ce8cb75d44f0f78bcbc433d53fdb588112e91eb5a91dec5a1c3ca504d729520b2ad6"
 	case "baozou":
 		return "a515314766c66a0146918898435cb2c08938a1cf3899c350cd905566983202334bea7b42c11ddb6b32cf21a1e61ec92ce74011509d3e126e12091d5f8590ce8ca721bb5d3b728cab1275abe305e5abbe0fd05533e1ca6610ad638f4ae08c5551"
 	case "apple":
@@ -318,6 +355,7 @@ func (c *Config) resolveRelativePaths() {
 	}
 	c.Catalog.ItemFile = resolvePath(base, c.Catalog.ItemFile)
 	c.Catalog.ItemNameFile = resolvePath(base, c.Catalog.ItemNameFile)
+	c.Captcha.ModelFile = resolvePath(base, c.Captcha.ModelFile)
 	c.QQ.GroupMapFile = resolvePath(base, c.QQ.GroupMapFile)
 	c.WxPusher.TopicMapFile = resolvePath(base, c.WxPusher.TopicMapFile)
 }
@@ -431,7 +469,7 @@ func (c *Config) Validate() error {
 			return fmt.Errorf("variant %q kind is required", v.Name)
 		}
 		switch v.Kind {
-		case "official", "h5", "baozou", "apple":
+		case "official", "h5", "mini", "baozou", "apple":
 		default:
 			return fmt.Errorf("variant %q has unsupported kind %q", v.Name, v.Kind)
 		}

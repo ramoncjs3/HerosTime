@@ -14,6 +14,7 @@ ENV GOPROXY=https://goproxy.cn,direct
 ENV GOSUMDB=sum.golang.google.cn
 
 COPY go.mod go.sum* ./
+COPY third_party/gonnx/go.mod third_party/gonnx/go.sum* ./third_party/gonnx/
 RUN go mod download
 
 COPY . .
@@ -25,5 +26,7 @@ FROM alpine:3.20
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=builder /out/oldbeggar /app/oldbeggar
+# ddddocr common.onnx 验证码识别模型（见 README “验证码识别”）。
+COPY --from=builder /src/ocr /app/ocr
 
 ENTRYPOINT ["/app/oldbeggar"]
