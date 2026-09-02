@@ -4,3 +4,5 @@ configs/*.local.yaml
 *.exe
 *.log
 .worktrees/
+.playwright-cli/
+.tmp/

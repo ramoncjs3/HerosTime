@@ -1,29 +1,30 @@
-# oldbeggar-refactor
+# 老乞丐推送
 
-这是“老乞丐推送”的 Go 重构版骨架，目标是把官方、苹果、H5、暴走几套重复代码收敛成一个配置驱动的长期运行程序。
+“老乞丐推送”的 Go 服务，统一管理官方、苹果、H5、暴走和微信小游戏等渠道的登录、商店查询与消息推送。
 
 ## 服务器部署
 
 当前服务器上的新程序部署在：
 
 ```bash
-/opt/bzyxt-oldbeggar/refactor
+/opt/bzyxt-oldbeggar-new
 ```
 
 Docker 运行信息：
 
-- Compose 项目名：`bzyxt-oldbeggar-refactor`
-- 容器：`bzyxt-oldbeggar-refactor-app`
-- 网络：`bzyxt-oldbeggar-refactor-net`
+- Compose 项目名：`bzyxt-oldbeggar-new`
+- 镜像：`bzyxt-oldbeggar-new:20260513`
+- 容器：`bzyxt-oldbeggar-new-app`
+- 网络：`bzyxt-oldbeggar-new-net`
 - 配置文件：`configs/config.local.yaml`
 - 状态目录：`state/`
 
-新程序不再使用 QQBot。生产配置里 `qq.api_url` 和 `qq.access_token` 保持为空，通过 WxPusher 推送。不要把新程序挂到老程序的 `bzyxt-oldbeggar-net`，也不要部署到 `/opt/bzyxt-oldbeggar/deploy`。
+生产环境不再使用 QQBot，`qq.api_url` 和 `qq.access_token` 保持为空，通过 WxPusher 推送。服务器只保留 `/opt/bzyxt-oldbeggar-new` 这套部署；旧容器、旧网络、旧镜像和旧部署目录已经清理。
 
 部署或重启：
 
 ```bash
-cd /opt/bzyxt-oldbeggar/refactor
+cd /opt/bzyxt-oldbeggar-new
 docker compose -f docker-compose.server.yml up -d --build app
 ```
 
@@ -31,8 +32,8 @@ docker compose -f docker-compose.server.yml up -d --build app
 
 ```bash
 docker compose -f docker-compose.server.yml ps
-docker inspect bzyxt-oldbeggar-refactor-app --format 'networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
-docker logs -f --tail=120 bzyxt-oldbeggar-refactor-app
+docker inspect bzyxt-oldbeggar-new-app --format 'networks={{range $k,$v := .NetworkSettings.Networks}}{{$k}} {{end}}'
+docker logs -f --tail=120 bzyxt-oldbeggar-new-app
 ```
 
 ## 管理后台
@@ -40,7 +41,7 @@ docker logs -f --tail=120 bzyxt-oldbeggar-refactor-app
 程序内置一个 Vue 管理后台，默认关闭。开启时必须提供账号和密码：
 
 ```bash
-cd /opt/bzyxt-oldbeggar/refactor
+cd /opt/bzyxt-oldbeggar-new
 export OLDBEGGAR_ADMIN_ENABLED=1
 export OLDBEGGAR_ADMIN_USERNAME=admin
 export OLDBEGGAR_ADMIN_PASSWORD='换成强密码'
@@ -50,7 +51,7 @@ docker compose -f docker-compose.server.yml up -d --build app
 默认端口映射为 `127.0.0.1:8088:8088`，适合用 SSH 隧道访问：
 
 ```bash
-ssh -J root@8.148.181.9 -L 18088:127.0.0.1:8088 root@36.137.84.162
+ssh -J root@8.148.181.9 -L 18088:127.0.0.1:8088 root@36.138.84.84
 ```
 
 本地打开 `http://127.0.0.1:18088`。如果要直接公网开放，设置 `OLDBEGGAR_ADMIN_BIND=0.0.0.0`，并建议配合安全组白名单或 HTTPS 反向代理。
@@ -74,6 +75,16 @@ export OLDBEGGAR_EXPANSION_FILE=/app/state/oldbeggar-expansion.json
 ```
 
 这个文件只保存后台新增的区服，不改写 `configs/config.local.yaml`。
+
+### 新区上线流程
+
+1. 在 WxPusher 后台为新区创建主题，主题名使用面向用户的区服名，例如“微信小游戏8区”，并记下 `topicId`。
+2. 打开管理后台的“区服配置”，选择对应服种，填写内部区服编号（例如 `xyx_8`）和 `topicId`，点击“保存并刷新”。账号密码留空时复用该服种的默认账号。
+3. 确认刷新登录成功，并检查 `state/oldbeggar-expansion.json` 已写入新区。
+4. 在独立订阅站仓库 [`zyf-github100/oldbeggar-subscribe`](https://github.com/zyf-github100/oldbeggar-subscribe) 的 `index.html` 中加入相同的内部区服编号和 `topicId`；推送到 `main` 后由 GitHub Pages 自动发布。
+5. 打开[老乞丐推送订阅页](https://zyf-github100.github.io/oldbeggar-subscribe/)确认区服数量、名称及订阅链接正确。
+
+当前微信小游戏新区映射为 `xyx_8 -> 46323`。订阅页只在上述独立仓库维护，本仓库不再保存或部署另一份订阅 HTML，避免两处内容不一致。
 
 ## 验证码识别
 
