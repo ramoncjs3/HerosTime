@@ -1,11 +1,11 @@
-name: bzyxt-oldbeggar-refactor
+name: bzyxt-oldbeggar-new
 
 services:
   app:
     build:
       context: .
-    image: bzyxt-oldbeggar-refactor:20260428
-    container_name: bzyxt-oldbeggar-refactor-app
+    image: bzyxt-oldbeggar-new:20260513
+    container_name: bzyxt-oldbeggar-new-app
     restart: unless-stopped
     command: ["-config", "/app/configs/config.local.yaml", "-mode", "run"]
     environment:
@@ -29,7 +29,7 @@ services:
       - ./catalog:/app/catalog:ro
       - ./state:/app/state
     networks:
-      - refactor_net
+      - new_net
     logging:
       driver: json-file
       options:
@@ -37,5 +37,5 @@ services:
         max-file: "5"
 
 networks:
-  refactor_net:
-    name: bzyxt-oldbeggar-refactor-net
+  new_net:
+    name: bzyxt-oldbeggar-new-net

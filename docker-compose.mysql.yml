@@ -6,7 +6,7 @@ services:
 
   mysql:
     image: mysql:8.4
-    container_name: bzyxt-oldbeggar-refactor-mysql
+    container_name: bzyxt-oldbeggar-new-mysql
     restart: unless-stopped
     environment:
       TZ: Asia/Shanghai
@@ -21,7 +21,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
     networks:
-      - refactor_net
+      - new_net
     healthcheck:
       test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u\"$${MYSQL_USER}\" -p\"$${MYSQL_PASSWORD}\" --silent"]
       interval: 10s
@@ -36,4 +36,4 @@ services:
 
 volumes:
   mysql_data:
-    name: bzyxt-oldbeggar-refactor-mysql-data
+    name: bzyxt-oldbeggar-new-mysql-data
