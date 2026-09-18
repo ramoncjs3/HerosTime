@@ -51,7 +51,7 @@ docker compose -f docker-compose.server.yml up -d --build app
 默认端口映射为 `127.0.0.1:8088:8088`，适合用 SSH 隧道访问：
 
 ```bash
-ssh -J root@8.148.181.9 -L 18088:127.0.0.1:8088 root@36.138.84.84
+ssh -J root@8.148.181.9 -L 18088:127.0.0.1:8088 root@36.138.26.220
 ```
 
 本地打开 `http://127.0.0.1:18088`。如果要直接公网开放，设置 `OLDBEGGAR_ADMIN_BIND=0.0.0.0`，并建议配合安全组白名单或 HTTPS 反向代理。
