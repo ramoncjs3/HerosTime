@@ -84,7 +84,7 @@ export OLDBEGGAR_EXPANSION_FILE=/app/state/oldbeggar-expansion.json
 4. 在独立订阅站仓库 [`zyf-github100/oldbeggar-subscribe`](https://github.com/zyf-github100/oldbeggar-subscribe) 的 `index.html` 中加入相同的内部区服编号和 `topicId`；推送到 `main` 后由 GitHub Pages 自动发布。
 5. 打开[老乞丐推送订阅页](https://zyf-github100.github.io/oldbeggar-subscribe/)确认区服数量、名称及订阅链接正确。
 
-当前新区映射为 `h26 -> 47567`、`b28 -> 47566`、`xyx_8 -> 46323`。订阅页只在上述独立仓库维护，本仓库不再保存或部署另一份订阅 HTML，避免两处内容不一致。
+当前新区映射为 `h26 -> 47567`、`b28 -> 47566`、`xyx_8 -> 46323`、`xyx_9 -> 48152`。订阅页只在上述独立仓库维护，本仓库不再保存或部署另一份订阅 HTML，避免两处内容不一致。
 
 ## 验证码识别
 
