@@ -37,8 +37,9 @@ func (c *Client) QuickLogin(ctx context.Context, session *Session) error {
 		return err
 	}
 	var result struct {
-		RoleID    float64 `json:"roleID"`
-		LoginFlag float64 `json:"loginFlag"`
+		RoleID     float64 `json:"roleID"`
+		LoginFlag  float64 `json:"loginFlag"`
+		CheckToken string  `json:"checkToken"`
 	}
 	if err := json.Unmarshal([]byte(decoded), &result); err != nil {
 		return err
@@ -48,13 +49,15 @@ func (c *Client) QuickLogin(ctx context.Context, session *Session) error {
 	}
 	session.RoleID = result.RoleID
 	session.LoginFlag = result.LoginFlag
+	session.CheckToken = result.CheckToken
 	return nil
 }
 
 func (c *Client) EventIsOver(ctx context.Context, session *Session) (bool, error) {
 	nonce := nonceForKind(session.Kind)
-	payload := fmt.Sprintf(`{"mod":"User","do":"GetBigMapSpecialEvent","p":{"roleID":%s,"web":false,"clientVersion":{"android":"2.3.4.1622199442306"},"NeedUpdateVersion":"2.1.7","userAccount":"%s","loginFlag":"%s","nonce":"%s"}}`,
+	payload := fmt.Sprintf(`{"mod":"User","do":"GetBigMapSpecialEvent","p":{"roleID":%s,"checkToken":"%s","web":false,"clientVersion":{"android":"2.3.4.1622199442306"},"NeedUpdateVersion":"2.1.7","userAccount":"%s","loginFlag":"%s","nonce":"%s"}}`,
 		floatString(session.RoleID),
+		session.CheckToken,
 		session.Credentials.LoginID,
 		floatString(session.LoginFlag),
 		nonce,
@@ -83,9 +86,10 @@ func (c *Client) SpecialShopItems(ctx context.Context, session *Session, npcID i
 		return nil, fmt.Errorf("invalid special shop npcID %d", npcID)
 	}
 	nonce := nonceForKind(session.Kind)
-	payload := fmt.Sprintf(`{"mod":"User","do":"GetSpecialShopData","p":{"npcID":%d,"roleID":%s,"web":false,"clientVersion":{"android":"2.3.4.1622199442306"},"NeedUpdateVersion":"2.3.4","userAccount":"%s","loginFlag":"%s","nonce":"%s"}}`,
+	payload := fmt.Sprintf(`{"mod":"User","do":"GetSpecialShopData","p":{"npcID":%d,"roleID":%s,"checkToken":"%s","web":false,"clientVersion":{"android":"2.3.4.1622199442306"},"NeedUpdateVersion":"2.3.4","userAccount":"%s","loginFlag":"%s","nonce":"%s"}}`,
 		npcID,
 		floatString(session.RoleID),
+		session.CheckToken,
 		session.Credentials.LoginID,
 		floatString(session.LoginFlag),
 		nonce,

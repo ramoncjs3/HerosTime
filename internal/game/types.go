@@ -19,4 +19,5 @@ type Session struct {
 	GameURL       string
 	RoleID        float64
 	LoginFlag     float64
+	CheckToken    string
 }
