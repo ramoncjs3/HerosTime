@@ -3,6 +3,8 @@ package auth
 import (
 	"bytes"
 	"context"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -96,11 +98,157 @@ func (p *BaozouProvider) Login(ctx context.Context, account Account) (Credential
 	if err != nil {
 		return Credentials{}, err
 	}
+	if strings.TrimSpace(p.cfg.U8AppKey) != "" {
+		credentials, u8Err := p.checkU8Server(ctx, account.Username, uid, token)
+		if u8Err == nil {
+			return credentials, nil
+		}
+		log.Printf("baozou U8 getToken failed, falling back to QuickAPI: %v", u8Err)
+	}
 	userToken, err := p.checkQuickAPI(ctx, account.Username, uid, token)
 	if err != nil {
 		return Credentials{}, err
 	}
 	return Credentials{LoginID: uid, Token: userToken}, nil
+}
+
+// checkU8Server follows the protocol used by the bundled U8 SDK. The 4399
+// channel result is sent as the extension to U8Server, which returns the
+// game-side userID and token used by quicklogin.
+func (p *BaozouProvider) checkU8Server(ctx context.Context, username, uid, token string) (Credentials, error) {
+	appID := strings.TrimSpace(p.cfg.U8AppID)
+	if appID == "" {
+		return Credentials{}, fmt.Errorf("baozou U8 appID is empty")
+	}
+	channel := strings.TrimSpace(p.cfg.U8Channel)
+	if channel == "" {
+		channel = strings.TrimSpace(p.cfg.ChannelCode)
+	}
+	if channel == "" {
+		return Credentials{}, fmt.Errorf("baozou U8 channelID is empty")
+	}
+	subChannel := strings.TrimSpace(p.cfg.U8SubChannel)
+	if subChannel == "" {
+		subChannel = "0"
+	}
+	sdkVersion := strings.TrimSpace(p.cfg.U8SDKVersionCode)
+	if sdkVersion == "" {
+		sdkVersion = "0"
+	}
+
+	extensionBytes, err := json.Marshal(struct {
+		UID      string `json:"uid"`
+		Nickname string `json:"nickname"`
+		Username string `json:"username"`
+		Token    string `json:"token"`
+	}{UID: uid, Nickname: username, Username: username, Token: token})
+	if err != nil {
+		return Credentials{}, fmt.Errorf("baozou encode U8 extension: %w", err)
+	}
+	extension := string(extensionBytes)
+	signInput := "appID=" + appID + "channelID=" + channel + "extension=" + extension + p.cfg.U8AppKey
+	sum := md5.Sum([]byte(signInput))
+
+	baseURL := strings.TrimRight(strings.TrimSpace(p.cfg.U8ServerURL), "/")
+	if baseURL == "" {
+		return Credentials{}, fmt.Errorf("baozou U8 server URL is empty")
+	}
+	query := url.Values{}
+	query.Set("appID", appID)
+	query.Set("channelID", channel)
+	query.Set("subChannelID", subChannel)
+	query.Set("extension", extension)
+	query.Set("sdkVersionCode", sdkVersion)
+	query.Set("deviceID", baozouDeviceID)
+	query.Set("sign", hex.EncodeToString(sum[:]))
+	resp, err := p.http.Get(ctx, baseURL+"/user/getToken?"+query.Encode())
+	if err != nil {
+		return Credentials{}, fmt.Errorf("baozou U8 getToken request: %w", err)
+	}
+
+	var result struct {
+		State json.RawMessage `json:"state"`
+		Data  json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(resp.Body, &result); err != nil {
+		return Credentials{}, fmt.Errorf("baozou U8 getToken decode response: %w", err)
+	}
+	state, err := parseJSONInt(result.State)
+	if err != nil {
+		return Credentials{}, fmt.Errorf("baozou U8 getToken invalid state: %w", err)
+	}
+	if state != 1 {
+		return Credentials{}, fmt.Errorf("baozou U8 getToken rejected request (state=%d data=%s)", state, describeBaozouData(result.Data))
+	}
+	var data struct {
+		UserID      json.RawMessage `json:"userID"`
+		SDKUserID   string          `json:"sdkUserID"`
+		Username    string          `json:"username"`
+		SDKUsername string          `json:"sdkUserName"`
+		Token       string          `json:"token"`
+	}
+	if err := json.Unmarshal(result.Data, &data); err != nil {
+		return Credentials{}, fmt.Errorf("baozou U8 getToken decode data: %w", err)
+	}
+	userID, err := parseJSONString(data.UserID)
+	if err != nil || userID == "" || strings.TrimSpace(data.Token) == "" {
+		return Credentials{}, fmt.Errorf("baozou U8 getToken returned incomplete user (userID=%q token_present=%t)", userID, strings.TrimSpace(data.Token) != "")
+	}
+	sdkUserID := strings.TrimSpace(data.SDKUserID)
+	if sdkUserID == "" {
+		sdkUserID = uid
+	}
+	displayName := strings.TrimSpace(data.SDKUsername)
+	if displayName == "" {
+		displayName = strings.TrimSpace(data.Username)
+	}
+	return Credentials{
+		// The game client uses the channel account as p.account/userAccount,
+		// while the U8 internal ID is sent as checkObj.sdk.
+		LoginID:     sdkUserID,
+		Token:       data.Token,
+		DisplayName: displayName,
+		AppID:       appID,
+		U8AppID:     appID,
+		U8UserID:    userID,
+		ChannelCode: channel,
+		SDKUserID:   sdkUserID,
+	}, nil
+}
+
+func parseJSONInt(raw json.RawMessage) (int, error) {
+	if len(raw) == 0 {
+		return 0, fmt.Errorf("missing value")
+	}
+	var number int
+	if err := json.Unmarshal(raw, &number); err == nil {
+		return number, nil
+	}
+	var text string
+	if err := json.Unmarshal(raw, &text); err != nil {
+		return 0, err
+	}
+	return strconv.Atoi(strings.TrimSpace(text))
+}
+
+func parseJSONString(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 {
+		return "", fmt.Errorf("missing value")
+	}
+	if value := normalizeUIDFromRaw(raw); value != "" {
+		return value, nil
+	}
+	return "", fmt.Errorf("unsupported value")
+}
+
+func normalizeUIDFromRaw(raw json.RawMessage) string {
+	var value interface{}
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	if err := decoder.Decode(&value); err != nil {
+		return ""
+	}
+	return normalizeUID(value)
 }
 
 func (p *BaozouProvider) fetchLoginURL(ctx context.Context, session *httputil.Client, username string) (*url.URL, error) {
@@ -504,12 +652,66 @@ func validateBaozouLoginURL(loginURL *url.URL) error {
 }
 
 func (p *BaozouProvider) checkQuickAPI(ctx context.Context, username, uid, token string) (string, error) {
-	payload := fmt.Sprintf(`{
-  "channel_code" : %s,
-  "uid" : "%s",
-  "token" : "%s",
-  "user_name" : "%s"}`, p.cfg.ChannelCode, uid, token, username)
-	encrypted, err := protocol.DESEncrypt(payload, p.cfg.DESKey)
+	userToken, err := p.checkQuickAPIWithChannel(ctx, username, uid, token, p.cfg.ChannelCode)
+	if err == nil {
+		return userToken, nil
+	}
+	if strings.TrimSpace(p.cfg.ChannelCode) != "" {
+		if retryToken, retryErr := p.checkQuickAPIWithChannel(ctx, username, uid, token, ""); retryErr == nil {
+			log.Printf("baozou checkLogin succeeded without channel_code")
+			return retryToken, nil
+		}
+	}
+	if verified, verifyErr := p.verifyBaozouToken(ctx, uid, token, p.cfg.ChannelCode); verifyErr != nil {
+		log.Printf("baozou checkUserInfo request failed: %v", verifyErr)
+	} else if verified {
+		log.Printf("baozou checkLogin unavailable; token verified through checkUserInfo")
+		return token, nil
+	}
+	if strings.TrimSpace(p.cfg.ChannelCode) != "" {
+		if verified, verifyErr := p.verifyBaozouToken(ctx, uid, token, ""); verifyErr == nil && verified {
+			log.Printf("baozou checkLogin unavailable; token verified without channel_code")
+			return token, nil
+		}
+	}
+	return "", err
+}
+
+func (p *BaozouProvider) verifyBaozouToken(ctx context.Context, uid, token, channelCode string) (bool, error) {
+	form := url.Values{}
+	form.Set("token", token)
+	form.Set("uid", uid)
+	form.Set("product_code", p.cfg.ProductCode)
+	if strings.TrimSpace(channelCode) != "" {
+		form.Set("channel_code", channelCode)
+	}
+	resp, err := p.http.PostForm(ctx, "http://checkuser.quickapi.net/v2/checkUserInfo", form, nil)
+	if err != nil {
+		return false, err
+	}
+	body := strings.TrimSpace(string(resp.Body))
+	if body != "1" {
+		log.Printf("baozou checkUserInfo rejected token: status=%d body=%s", resp.StatusCode, describeBaozouData(resp.Body))
+	}
+	return body == "1", nil
+}
+
+func (p *BaozouProvider) checkQuickAPIWithChannel(ctx context.Context, username, uid, token, channelCode string) (string, error) {
+	payload, err := json.Marshal(struct {
+		ChannelCode string `json:"channel_code,omitempty"`
+		UID         string `json:"uid"`
+		Token       string `json:"token"`
+		UserName    string `json:"user_name"`
+	}{
+		ChannelCode: p.cfg.ChannelCode,
+		UID:         uid,
+		Token:       token,
+		UserName:    username,
+	})
+	if err != nil {
+		return "", err
+	}
+	encrypted, err := protocol.DESEncrypt(string(payload), p.cfg.DESKey)
 	if err != nil {
 		return "", err
 	}
@@ -521,17 +723,136 @@ func (p *BaozouProvider) checkQuickAPI(ctx context.Context, username, uid, token
 		return "", err
 	}
 	var result struct {
-		Data struct {
-			UserToken string `json:"user_token"`
-		} `json:"data"`
+		Status  *bool           `json:"status"`
+		Code    json.RawMessage `json:"code"`
+		Msg     string          `json:"msg"`
+		Message string          `json:"message"`
+		Data    json.RawMessage `json:"data"`
 	}
 	if err := json.Unmarshal(resp.Body, &result); err != nil {
 		return "", err
 	}
-	if result.Data.UserToken == "" {
-		return "", fmt.Errorf("baozou checkLogin returned empty user_token")
+	if result.Status != nil && !*result.Status {
+		return "", fmt.Errorf("baozou checkLogin rejected request (message=%q data=%s)", result.Message, describeBaozouData(result.Data))
 	}
-	return result.Data.UserToken, nil
+	userToken, err := parseBaozouUserToken(result.Data)
+	if err != nil {
+		return "", fmt.Errorf("baozou checkLogin decode data: %w", err)
+	}
+	if userToken == "" {
+		// A newer response variant may put the token outside data while still
+		// returning data as an empty array. Search the full envelope as a
+		// compatibility fallback.
+		userToken, err = parseBaozouUserToken(json.RawMessage(resp.Body))
+		if err != nil {
+			return "", fmt.Errorf("baozou checkLogin decode response: %w", err)
+		}
+	}
+	if userToken == "" {
+		return "", fmt.Errorf("baozou checkLogin returned empty user_token (code=%s msg=%q message=%q data=%s)",
+			strings.TrimSpace(string(result.Code)), result.Msg, result.Message, describeBaozouData(result.Data))
+	}
+	return userToken, nil
+}
+
+func describeBaozouData(raw json.RawMessage) string {
+	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "" {
+		return "missing"
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	var value interface{}
+	if err := decoder.Decode(&value); err != nil {
+		return "invalid"
+	}
+	return describeBaozouValue(value)
+}
+
+func describeBaozouValue(value interface{}) string {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		keys := make([]string, 0, len(v))
+		for key := range v {
+			keys = append(keys, key)
+		}
+		return fmt.Sprintf("object(keys=%s)", strings.Join(keys, ","))
+	case []interface{}:
+		return fmt.Sprintf("array(len=%d)", len(v))
+	case string:
+		return fmt.Sprintf("string(len=%d)", len(v))
+	case json.Number:
+		return "number"
+	case nil:
+		return "null"
+	default:
+		return fmt.Sprintf("%T", value)
+	}
+}
+
+// parseBaozouUserToken accepts both response shapes returned by the quick API:
+// data can be a single object or an array of objects. Some deployments also
+// wrap the object one level deeper, so walk the decoded value recursively.
+func parseBaozouUserToken(raw json.RawMessage) (string, error) {
+	if len(raw) == 0 || strings.TrimSpace(string(raw)) == "" || strings.TrimSpace(string(raw)) == "null" {
+		return "", nil
+	}
+	decoder := json.NewDecoder(strings.NewReader(string(raw)))
+	decoder.UseNumber()
+	var value interface{}
+	if err := decoder.Decode(&value); err != nil {
+		return "", err
+	}
+	if token, ok := value.(string); ok {
+		return strings.TrimSpace(token), nil
+	}
+	return findBaozouUserToken(value), nil
+}
+
+func findBaozouUserToken(value interface{}) string {
+	switch v := value.(type) {
+	case map[string]interface{}:
+		for key, item := range v {
+			if isBaozouTokenKey(key) {
+				if token := normalizeUID(item); token != "" {
+					return token
+				}
+			}
+		}
+		for _, item := range v {
+			if token := findBaozouNestedToken(item); token != "" {
+				return token
+			}
+		}
+	case []interface{}:
+		for _, item := range v {
+			if token := findBaozouNestedToken(item); token != "" {
+				return token
+			}
+		}
+		if len(v) == 1 {
+			return normalizeUID(v[0])
+		}
+	}
+	return ""
+}
+
+func findBaozouNestedToken(value interface{}) string {
+	switch value.(type) {
+	case map[string]interface{}, []interface{}:
+		return findBaozouUserToken(value)
+	default:
+		return ""
+	}
+}
+
+func isBaozouTokenKey(key string) bool {
+	normalized := strings.NewReplacer("_", "", "-", "").Replace(strings.ToLower(strings.TrimSpace(key)))
+	switch normalized {
+	case "token", "usertoken", "logintoken", "accesstoken":
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeUID(value interface{}) string {

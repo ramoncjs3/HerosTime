@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -28,11 +29,11 @@ func NewClient(httpClient *httputil.Client, itemCatalog *catalog.Catalog) *Clien
 }
 
 func (c *Client) QuickLogin(ctx context.Context, session *Session) error {
-	payload, err := quickLoginPayload(session)
+	attempts, err := quickLoginAttempts(session)
 	if err != nil {
 		return err
 	}
-	decoded, err := c.postGame(ctx, session.QuickLoginURL+"/quicklogin", payload)
+	decoded, err := c.postGame(ctx, session.QuickLoginURL+"/quicklogin", attempts[0].payload)
 	if err != nil {
 		return err
 	}
@@ -45,12 +46,73 @@ func (c *Client) QuickLogin(ctx context.Context, session *Session) error {
 		return err
 	}
 	if result.RoleID == 0 || result.LoginFlag == 0 {
-		return ErrEmptyQuickLogin
+		return fmt.Errorf("%w: %s", ErrEmptyQuickLogin, summarizeQuickLoginResponse(decoded))
 	}
 	session.RoleID = result.RoleID
 	session.LoginFlag = result.LoginFlag
 	session.CheckToken = result.CheckToken
 	return nil
+}
+
+type quickLoginAttempt struct {
+	name    string
+	payload string
+}
+
+func quickLoginAttempts(session *Session) ([]quickLoginAttempt, error) {
+	if session.Kind != "baozou" {
+		payload, err := quickLoginPayload(session)
+		if err != nil {
+			return nil, err
+		}
+		return []quickLoginAttempt{{name: "default", payload: payload}}, nil
+	}
+	account := session.Credentials.LoginID
+	u8UserID := session.Credentials.U8UserID
+	if u8UserID == "" {
+		return nil, fmt.Errorf("baozou U8 userID is empty")
+	}
+	sdkUserID := session.Credentials.SDKUserID
+	if sdkUserID == "" {
+		sdkUserID = account
+	}
+	channel := session.Credentials.ChannelCode
+	if channel == "" {
+		channel = "27"
+	}
+	payload, err := quickLoginPayloadBaozouExact(session, channel, account, u8UserID, sdkUserID, session.Credentials.Token, session.Credentials.U8AppID)
+	if err != nil {
+		return nil, err
+	}
+	return []quickLoginAttempt{{name: "u8sdk", payload: payload}}, nil
+}
+
+func summarizeQuickLoginResponse(decoded string) string {
+	var values map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(decoded), &values); err != nil {
+		return "response=invalid-json"
+	}
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, 5)
+	for _, key := range keys {
+		lower := strings.ToLower(key)
+		if lower != "roleid" && lower != "loginflag" && lower != "code" && lower != "msg" && lower != "message" && lower != "error" && lower != "state" {
+			continue
+		}
+		value := strings.TrimSpace(string(values[key]))
+		if len(value) > 120 {
+			value = value[:120] + "..."
+		}
+		parts = append(parts, key+"="+value)
+	}
+	if len(parts) == 0 {
+		return "response-keys=" + strings.Join(keys, ",")
+	}
+	return strings.Join(parts, " ")
 }
 
 func (c *Client) EventIsOver(ctx context.Context, session *Session) (bool, error) {
@@ -174,16 +236,31 @@ func quickLoginPayload(session *Session) (string, error) {
 			nonce,
 		), nil
 	case "baozou":
-		return fmt.Sprintf(`{"mod":"User","do":"quicklogin","p":{"account":"%s","pwd":"123456","checkObj":{"app":"83313602112675691534121381984132","sdk":"27","uin":"%s","sess":"%s","newPack":1},"channel":"27","flag":1,"macAdress":"02:00:00:00:00:00","platform":"2","web":false,"clientVersion":{"android":"2.3.5.1629810643786"},"NeedUpdateVersion":"2.1.9","inGameTime":0,"roleID":0,"userAccount":"%s","loginFlag":"0","nonce":"%s"}}`,
-			session.Credentials.LoginID,
-			session.Credentials.LoginID,
-			session.Credentials.Token,
-			session.Credentials.LoginID,
-			nonce,
-		), nil
+		channel := session.Credentials.ChannelCode
+		if channel == "" {
+			channel = "27"
+		}
+		return quickLoginPayloadBaozouExact(session, channel, session.Credentials.LoginID, session.Credentials.U8UserID, session.Credentials.SDKUserID, session.Credentials.Token, session.Credentials.U8AppID)
 	default:
 		return "", fmt.Errorf("unsupported quicklogin kind %q", session.Kind)
 	}
+}
+
+func quickLoginPayloadBaozouExact(session *Session, channel, account, sdk, uin, sess, mac string) (string, error) {
+	if mac == "" {
+		mac = "8029"
+	}
+	nonce := nonceForKind(session.Kind)
+	return fmt.Sprintf(`{"mod":"User","do":"quicklogin","p":{"account":"%s","pwd":"123456","checkObj":{"app":"u8sdk","sdk":"%s","uin":"%s","sess":"%s","newPack":1},"channel":"%s","flag":1,"macAdress":"%s","platform":8,"web":false,"clientVersion":{"android":"2.3.5.1629810643786"},"NeedUpdateVersion":"2.1.9","inGameTime":0,"roleID":0,"userAccount":"%s","loginFlag":"0","nonce":"%s"}}`,
+		account,
+		sdk,
+		uin,
+		sess,
+		channel,
+		mac,
+		account,
+		nonce,
+	), nil
 }
 
 func nonceForKind(kind string) string {

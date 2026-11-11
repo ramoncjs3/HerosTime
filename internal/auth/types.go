@@ -19,6 +19,13 @@ type Credentials struct {
 	Token       string
 	DisplayName string
 	Sign        string
+	// U8 fields are populated for the 4399/U8 login flow. They are kept
+	// separate because U8 has both an internal userID and a channel userID.
+	AppID       string
+	U8AppID     string
+	U8UserID    string
+	ChannelCode string
+	SDKUserID   string
 }
 
 type Provider interface {

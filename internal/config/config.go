@@ -159,15 +159,21 @@ type Variant struct {
 }
 
 type AuthConfig struct {
-	Username    string `yaml:"username"`
-	Password    string `yaml:"password"`
-	OpenSSLKey  string `yaml:"openssl_key"`
-	DESKey      string `yaml:"des_key"`
-	ProductCode string `yaml:"product_code"`
-	ChannelCode string `yaml:"channel_code"`
-	GameID      string `yaml:"game_id"`
-	GameKey     string `yaml:"game_key"`
-	PackageName string `yaml:"package_name"`
+	Username         string `yaml:"username"`
+	Password         string `yaml:"password"`
+	OpenSSLKey       string `yaml:"openssl_key"`
+	DESKey           string `yaml:"des_key"`
+	ProductCode      string `yaml:"product_code"`
+	ChannelCode      string `yaml:"channel_code"`
+	GameID           string `yaml:"game_id"`
+	GameKey          string `yaml:"game_key"`
+	PackageName      string `yaml:"package_name"`
+	U8ServerURL      string `yaml:"u8_server_url"`
+	U8AppID          string `yaml:"u8_app_id"`
+	U8AppKey         string `yaml:"u8_app_key"`
+	U8Channel        string `yaml:"u8_channel"`
+	U8SubChannel     string `yaml:"u8_sub_channel"`
+	U8SDKVersionCode string `yaml:"u8_sdk_version_code"`
 }
 
 type ServerRule struct {
@@ -304,7 +310,7 @@ func (c *Config) applyDefaults() {
 			v.Auth.DESKey = "57493415"
 		}
 		if v.Auth.ProductCode == "" {
-			v.Auth.ProductCode = "83313602112675691534121381984132"
+			v.Auth.ProductCode = "8029"
 		}
 		if v.Auth.ChannelCode == "" {
 			v.Auth.ChannelCode = "27"
@@ -317,6 +323,26 @@ func (c *Config) applyDefaults() {
 		}
 		if v.Auth.PackageName == "" {
 			v.Auth.PackageName = "com.maple.madherogo.m4399"
+		}
+		if v.Kind == "baozou" {
+			if v.Auth.U8ServerURL == "" {
+				v.Auth.U8ServerURL = "https://u8sdk.maple-game.com/server"
+			}
+			if v.Auth.U8AppID == "" {
+				v.Auth.U8AppID = "8029"
+			}
+			if v.Auth.U8Channel == "" {
+				v.Auth.U8Channel = v.Auth.ChannelCode
+			}
+			if v.Auth.U8SubChannel == "" {
+				v.Auth.U8SubChannel = "0"
+			}
+			if v.Auth.U8SDKVersionCode == "" {
+				v.Auth.U8SDKVersionCode = "0"
+			}
+			if v.Auth.U8AppKey == "" {
+				v.Auth.U8AppKey = strings.TrimSpace(os.Getenv("BAOZOU_U8_APPKEY"))
+			}
 		}
 	}
 }

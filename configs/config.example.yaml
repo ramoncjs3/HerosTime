@@ -139,10 +139,18 @@ variants:
       password: ${BAOZOU_PASSWORD}
       openssl_key: lzYW5qaXVqa
       des_key: "57493415"
-      product_code: "83313602112675691534121381984132"
+      product_code: "8029"
       channel_code: "27"
       game_key: "116798"
       package_name: com.maple.madherogo.m4399
+      # U8 SDK server login settings. Keep u8_app_key in an environment
+      # variable (BAOZOU_U8_APPKEY); do not commit it to the repository.
+      u8_server_url: https://u8sdk.maple-game.com/server
+      u8_app_id: "8029"
+      u8_app_key: ${BAOZOU_U8_APPKEY}
+      u8_channel: "27"
+      u8_sub_channel: "0"
+      u8_sdk_version_code: "0"
     server_rules:
       - match_prefix: 暴走
         code_prefix: b
